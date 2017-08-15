@@ -1,0 +1,283 @@
+package main
+
+import (
+	"encoding/json"
+	"net/http"
+	"strconv"
+
+	"github.com/julienschmidt/httprouter"
+	log "github.com/sirupsen/logrus"
+	mgo "gopkg.in/mgo.v2"
+)
+
+type Store interface {
+	// User methods
+	CreateUser(u *User) error
+	UpdateUser(id int, u *User) error
+	GetUser(id int, u *User) error
+	GetUserVisits(id int, visits *[]Visit) error
+
+	// Location methods
+	CreateLocation(l *Location) error
+	UpdateLocation(id int, l *Location) error
+	GetLocation(id int, l *Location) error
+	GetLocationAvg(id int) (float32, error)
+
+	// Visit methods
+	CreateVisit(v *Visit) error
+	UpdateVisit(id int, v *Visit) error
+	GetVisit(id int, v *Visit) error
+
+	// Clear the entire databasec
+	Clear() error
+}
+
+type Server struct {
+	store Store
+}
+
+func NewServer(store Store) *Server {
+	return &Server{store}
+}
+
+func (s *Server) Listen(addr string) error {
+	return http.ListenAndServe(addr, s.handler())
+}
+
+func (s *Server) handler() http.Handler {
+	r := httprouter.New()
+	// Users
+	// r.POST("/users/new", s.createUser) // conflicts with existing wildcard
+	r.POST("/users/:id", s.updateUser)
+	r.GET("/users/:id", s.getUser)
+	r.GET("/users/:id/visits", s.getUserVisits)
+
+	// Locations
+	// r.POST("/locations/new", s.createLocation)
+	r.POST("/locations/:id", s.updateLocation)
+	r.GET("/locations/:id", s.getLocation)
+	r.GET("/locations/:id/avg", s.getLocationAvg)
+
+	// Visits
+	// r.POST("/visits/new", s.createVisit)
+	r.POST("/visits/:id", s.updateVisit)
+	r.GET("/visits/:id", s.getVisit)
+
+	return r
+}
+
+// Users endpoints
+func (s *Server) createUser(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var user User
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if err := s.store.CreateUser(&user); err != nil {
+		handleDbError(w, err)
+		return
+	}
+	jsonResponse(w, struct{}{})
+}
+
+func (s *Server) updateUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	if ps.ByName("id") == "new" {
+		s.createUser(w, r, ps)
+		return
+	}
+	id, err := strconv.Atoi(ps.ByName("id"))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	var user User
+	// check user exists first
+	if err := s.store.GetUser(id, &user); err != nil {
+		handleDbError(w, err)
+		return
+	}
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if err := s.store.UpdateUser(id, &user); err != nil {
+		handleDbError(w, err)
+		return
+	}
+	jsonResponse(w, struct{}{})
+}
+
+func (s *Server) getUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	id, err := strconv.Atoi(ps.ByName("id"))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	var user User
+	if err := s.store.GetUser(id, &user); err != nil {
+		handleDbError(w, err)
+		return
+	}
+	jsonResponse(w, &user)
+}
+
+func (s *Server) getUserVisits(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	id, err := strconv.Atoi(ps.ByName("id"))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	var visits []Visit
+	if err := s.store.GetUserVisits(id, &visits); err != nil {
+		handleDbError(w, err)
+		return
+	}
+	if len(visits) == 0 {
+		visits = make([]Visit, 0)
+	}
+	jsonResponse(w, map[string]interface{}{
+		"visits": visits,
+	})
+}
+
+// Locations endpoints
+func (s *Server) createLocation(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var location Location
+	if err := json.NewDecoder(r.Body).Decode(&location); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if err := s.store.CreateLocation(&location); err != nil {
+		handleDbError(w, err)
+		return
+	}
+	jsonResponse(w, struct{}{})
+}
+
+func (s *Server) updateLocation(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	if ps.ByName("id") == "new" {
+		s.createLocation(w, r, ps)
+		return
+	}
+	id, err := strconv.Atoi(ps.ByName("id"))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	var location Location
+	// check location exists first
+	if err := s.store.GetLocation(id, &location); err != nil {
+		handleDbError(w, err)
+		return
+	}
+	if err := json.NewDecoder(r.Body).Decode(&location); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if err := s.store.UpdateLocation(id, &location); err != nil {
+		handleDbError(w, err)
+		return
+	}
+	jsonResponse(w, struct{}{})
+}
+
+func (s *Server) getLocation(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	id, err := strconv.Atoi(ps.ByName("id"))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	var location Location
+	if err := s.store.GetLocation(id, &location); err != nil {
+		handleDbError(w, err)
+		return
+	}
+	jsonResponse(w, &location)
+}
+
+func (s *Server) getLocationAvg(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	id, err := strconv.Atoi(ps.ByName("id"))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	avg, err := s.store.GetLocationAvg(id)
+	if err != nil {
+		handleDbError(w, err)
+		return
+	}
+	jsonResponse(w, map[string]interface{}{
+		"avg": avg,
+	})
+}
+
+// Visits endpoints
+func (s *Server) createVisit(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var visit Visit
+	if err := json.NewDecoder(r.Body).Decode(&visit); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if err := s.store.CreateVisit(&visit); err != nil {
+		handleDbError(w, err)
+		return
+	}
+	jsonResponse(w, struct{}{})
+}
+
+func (s *Server) updateVisit(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	if ps.ByName("id") == "new" {
+		s.createVisit(w, r, ps)
+		return
+	}
+	id, err := strconv.Atoi(ps.ByName("id"))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	var visit Visit
+	// check location exists first
+	if err := s.store.GetVisit(id, &visit); err != nil {
+		handleDbError(w, err)
+		return
+	}
+	if err := json.NewDecoder(r.Body).Decode(&visit); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if err := s.store.UpdateVisit(id, &visit); err != nil {
+		handleDbError(w, err)
+		return
+	}
+	jsonResponse(w, struct{}{})
+}
+
+func (s *Server) getVisit(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	id, err := strconv.Atoi(ps.ByName("id"))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	var visit Visit
+	if err := s.store.GetVisit(id, &visit); err != nil {
+		handleDbError(w, err)
+		return
+	}
+	jsonResponse(w, &visit)
+}
+
+func handleDbError(w http.ResponseWriter, err error) {
+	if err == mgo.ErrNotFound {
+		w.WriteHeader(http.StatusNotFound)
+	} else if err == ErrUpdateID {
+		w.WriteHeader(http.StatusBadRequest)
+	} else {
+		log.Errorf("Database error: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func jsonResponse(w http.ResponseWriter, body interface{}) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	json.NewEncoder(w).Encode(body)
+}
