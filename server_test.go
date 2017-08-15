@@ -676,8 +676,8 @@ func TestHandlers(t *testing.T) {
 			assert.Equal(t, tc.response, string(buf), "invalid response body")
 			if len(tc.response) > 0 {
 				assert.Equal(t,
-					res.Header.Get("Content-Type"),
 					"application/json; charset=utf-8",
+					res.Header.Get("Content-Type"),
 					"invalid content type header")
 			}
 			store.AssertExpectations(t)
@@ -709,8 +709,8 @@ func TestRouting(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, res.StatusCode, "invalid status code")
 	assert.Equal(t,
-		res.Header.Get("Content-Type"),
 		"application/json; charset=utf-8",
+		res.Header.Get("Content-Type"),
 		"invalid content type header")
 
 	buf, err := ioutil.ReadAll(res.Body)
