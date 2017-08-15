@@ -61,6 +61,20 @@ func TestHandlers(t *testing.T) {
 			statusCode: http.StatusBadRequest,
 		},
 		{
+			name:       "CreateUser/WithoutID",
+			handler:    srv.updateUser,
+			entityID:   "new",
+			request:    `{"first_name":"User"}`,
+			statusCode: http.StatusBadRequest,
+			storeMethods: []StoreMethod{
+				{
+					method:     "CreateUser",
+					args:       []interface{}{mock.AnythingOfType("*main.User")},
+					returnArgs: []interface{}{ErrMissingID},
+				},
+			},
+		},
+		{
 			name:       "CreateUser/DatabaseError",
 			handler:    srv.updateUser,
 			entityID:   "new",

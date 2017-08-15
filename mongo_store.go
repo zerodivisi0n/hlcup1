@@ -7,7 +7,10 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-var ErrUpdateID = errors.New("id field cannot be changed")
+var (
+	ErrMissingID = errors.New("missing id")
+	ErrUpdateID  = errors.New("id field cannot be changed")
+)
 
 type sessionFunc func(s *mgo.Session) error
 
@@ -21,6 +24,9 @@ func NewMongoStore(s *mgo.Session) *MongoStore {
 
 // User methods
 func (s *MongoStore) CreateUser(u *User) error {
+	if u.ID == 0 {
+		return ErrMissingID
+	}
 	return s.withSession(func(s *mgo.Session) error {
 		return usersCollection(s).Insert(u)
 	})
@@ -49,6 +55,9 @@ func (s *MongoStore) GetUserVisits(id int, visits *[]Visit) error {
 
 // Location methods
 func (s *MongoStore) CreateLocation(l *Location) error {
+	if l.ID == 0 {
+		return ErrMissingID
+	}
 	return s.withSession(func(s *mgo.Session) error {
 		return locationsCollection(s).Insert(l)
 	})
@@ -76,6 +85,9 @@ func (s *MongoStore) GetLocationAvg(id int) (float32, error) {
 
 // Visit methods
 func (s *MongoStore) CreateVisit(v *Visit) error {
+	if v.ID == 0 {
+		return ErrMissingID
+	}
 	return s.withSession(func(s *mgo.Session) error {
 		return visitsCollection(s).Insert(v)
 	})
