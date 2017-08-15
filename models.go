@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
+	"gopkg.in/mgo.v2/bson"
 )
 
 type User struct {
@@ -35,7 +37,7 @@ type Timestamp struct {
 	time.Time
 }
 
-func (t *Timestamp) MarshalJSON() ([]byte, error) {
+func (t Timestamp) MarshalJSON() ([]byte, error) {
 	ts := t.Time.Unix()
 	stamp := fmt.Sprint(ts)
 
@@ -51,4 +53,28 @@ func (t *Timestamp) UnmarshalJSON(b []byte) error {
 	t.Time = time.Unix(int64(ts), 0)
 
 	return nil
+}
+
+func (t Timestamp) GetBSON() (interface{}, error) {
+	if time.Time(t.Time).IsZero() {
+		return nil, nil
+	}
+
+	return time.Time(t.Time), nil
+}
+
+func (t *Timestamp) SetBSON(raw bson.Raw) error {
+	var tm time.Time
+
+	if err := raw.Unmarshal(&tm); err != nil {
+		return err
+	}
+
+	*t = Timestamp{tm}
+
+	return nil
+}
+
+func (t *Timestamp) String() string {
+	return time.Time(t.Time).String()
 }
