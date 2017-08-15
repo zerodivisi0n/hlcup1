@@ -75,6 +75,13 @@ func TestHandlers(t *testing.T) {
 			},
 		},
 		{
+			name:       "CreateUser/ValidationError",
+			handler:    srv.updateUser,
+			entityID:   "new",
+			request:    `{"first_name":"Alien","gender":"u"}`,
+			statusCode: http.StatusBadRequest,
+		},
+		{
 			name:       "CreateUser/DatabaseError",
 			handler:    srv.updateUser,
 			entityID:   "new",
@@ -141,6 +148,20 @@ func TestHandlers(t *testing.T) {
 			entityID:   "1",
 			statusCode: http.StatusBadRequest,
 			request:    `{bad-json}`,
+			storeMethods: []StoreMethod{
+				{
+					method:     "GetUser",
+					args:       []interface{}{1, mock.AnythingOfType("*main.User")},
+					returnArgs: []interface{}{nil},
+				},
+			},
+		},
+		{
+			name:       "UpdateUser/ValidationError",
+			handler:    srv.updateUser,
+			entityID:   "1",
+			statusCode: http.StatusBadRequest,
+			request:    `{"first_name":"Alien","gender":"u"}`,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUser",
@@ -299,6 +320,13 @@ func TestHandlers(t *testing.T) {
 			statusCode: http.StatusBadRequest,
 		},
 		{
+			name:       "CreateLocation/ValidationError",
+			handler:    srv.updateLocation,
+			entityID:   "new",
+			request:    `{"distance":-5}`,
+			statusCode: http.StatusBadRequest,
+		},
+		{
 			name:       "CreateUser/DatabaseError",
 			handler:    srv.updateLocation,
 			entityID:   "new",
@@ -365,6 +393,20 @@ func TestHandlers(t *testing.T) {
 			entityID:   "1",
 			statusCode: http.StatusBadRequest,
 			request:    `{bad-json}`,
+			storeMethods: []StoreMethod{
+				{
+					method:     "GetLocation",
+					args:       []interface{}{1, mock.AnythingOfType("*main.Location")},
+					returnArgs: []interface{}{nil},
+				},
+			},
+		},
+		{
+			name:       "UpdateLocation/ValidationError",
+			handler:    srv.updateLocation,
+			entityID:   "1",
+			statusCode: http.StatusBadRequest,
+			request:    `{"distance":-50}`,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetLocation",
@@ -473,7 +515,7 @@ func TestHandlers(t *testing.T) {
 			name:     "CreateVisit",
 			handler:  srv.updateVisit,
 			entityID: "new",
-			request:  `{"id":100,"user":1,"location":15,"visited_at":58258357,"mark":5}`,
+			request:  `{"id":100,"user":1,"location":15,"visited_at":1268006400,"mark":5}`,
 			response: "{}\n",
 			storeMethods: []StoreMethod{
 				{
@@ -491,10 +533,17 @@ func TestHandlers(t *testing.T) {
 			statusCode: http.StatusBadRequest,
 		},
 		{
+			name:       "CreateVisit/ValidationError",
+			handler:    srv.updateVisit,
+			entityID:   "new",
+			request:    `{"mark":-10}`,
+			statusCode: http.StatusBadRequest,
+		},
+		{
 			name:       "CreateVisit/DatabaseError",
 			handler:    srv.updateVisit,
 			entityID:   "new",
-			request:    `{"id":100,"user":1,"location":15,"visited_at":58258357,"mark":5}`,
+			request:    `{"id":100,"user":1,"location":15,"visited_at":1268006400,"mark":5}`,
 			statusCode: http.StatusInternalServerError,
 			storeMethods: []StoreMethod{
 				{
@@ -557,6 +606,20 @@ func TestHandlers(t *testing.T) {
 			entityID:   "1",
 			statusCode: http.StatusBadRequest,
 			request:    `{bad-json}`,
+			storeMethods: []StoreMethod{
+				{
+					method:     "GetVisit",
+					args:       []interface{}{1, mock.AnythingOfType("*main.Visit")},
+					returnArgs: []interface{}{nil},
+				},
+			},
+		},
+		{
+			name:       "UpdateVisit/ValidationError",
+			handler:    srv.updateVisit,
+			entityID:   "1",
+			statusCode: http.StatusBadRequest,
+			request:    `{"visited_at":900000000}`,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetVisit",

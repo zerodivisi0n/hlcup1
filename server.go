@@ -7,6 +7,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	log "github.com/sirupsen/logrus"
+	validator "gopkg.in/go-playground/validator.v9"
 	mgo "gopkg.in/mgo.v2"
 )
 
@@ -33,11 +34,17 @@ type Store interface {
 }
 
 type Server struct {
-	store Store
+	store     Store
+	validator *validator.Validate
 }
 
 func NewServer(store Store) *Server {
-	return &Server{store}
+	v := validator.New()
+	v.RegisterCustomTypeFunc(ValidateTimestamp, Timestamp{})
+	return &Server{
+		store:     store,
+		validator: v,
+	}
 }
 
 func (s *Server) Listen(addr string) error {
@@ -73,6 +80,10 @@ func (s *Server) createUser(w http.ResponseWriter, r *http.Request, _ httprouter
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	if err := s.validator.Struct(&user); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	if err := s.store.CreateUser(&user); err != nil {
 		handleDbError(w, err)
 		return
@@ -97,6 +108,10 @@ func (s *Server) updateUser(w http.ResponseWriter, r *http.Request, ps httproute
 		return
 	}
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if err := s.validator.Struct(user); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -147,6 +162,10 @@ func (s *Server) createLocation(w http.ResponseWriter, r *http.Request, _ httpro
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	if err := s.validator.Struct(&location); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	if err := s.store.CreateLocation(&location); err != nil {
 		handleDbError(w, err)
 		return
@@ -171,6 +190,10 @@ func (s *Server) updateLocation(w http.ResponseWriter, r *http.Request, ps httpr
 		return
 	}
 	if err := json.NewDecoder(r.Body).Decode(&location); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if err := s.validator.Struct(&location); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -218,6 +241,10 @@ func (s *Server) createVisit(w http.ResponseWriter, r *http.Request, _ httproute
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	if err := s.validator.Struct(&visit); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	if err := s.store.CreateVisit(&visit); err != nil {
 		handleDbError(w, err)
 		return
@@ -242,6 +269,10 @@ func (s *Server) updateVisit(w http.ResponseWriter, r *http.Request, ps httprout
 		return
 	}
 	if err := json.NewDecoder(r.Body).Decode(&visit); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if err := s.validator.Struct(&visit); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
