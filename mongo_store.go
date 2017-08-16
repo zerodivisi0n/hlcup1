@@ -112,7 +112,10 @@ func (s *MongoStore) GetLocationAvg(id int, q *LocationAvgQuery) (float64, error
 			return mgo.ErrNotFound
 		}
 		result := bson.M{}
-		if err := visitsCollection(s).Pipe(locationAvgPipeline(id, q)).One(&result); err != nil {
+		err = visitsCollection(s).Pipe(locationAvgPipeline(id, q)).One(&result)
+		if err == mgo.ErrNotFound {
+			return nil
+		} else if err != nil {
 			return err
 		}
 		avg = result["avg"].(float64)
