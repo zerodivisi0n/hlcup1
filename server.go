@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -245,7 +246,7 @@ func (s *Server) getLocationAvg(w http.ResponseWriter, r *http.Request, ps httpr
 		return
 	}
 	jsonResponse(w, map[string]interface{}{
-		"avg": avg,
+		"avg": math.Floor(avg*100000+0.5) / 100000,
 	})
 }
 

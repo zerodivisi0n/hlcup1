@@ -594,6 +594,19 @@ func TestHandlers(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:     "GetLocationAvg/Rounding",
+			handler:  srv.getLocationAvg,
+			entityID: "15",
+			response: `{"avg":2.65217}` + "\n",
+			storeMethods: []StoreMethod{
+				{
+					method:     "GetLocationAvg",
+					args:       []interface{}{15, &LocationAvgQuery{}},
+					returnArgs: []interface{}{2.652173913043478, nil},
+				},
+			},
+		},
 		//-------------------------------
 		// Visit endpoints tests
 		//-------------------------------
