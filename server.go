@@ -103,7 +103,7 @@ func (s *Server) updateUser(w http.ResponseWriter, r *http.Request, ps httproute
 	}
 	id, err := strconv.Atoi(ps.ByName("id"))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	var user User
@@ -130,7 +130,7 @@ func (s *Server) updateUser(w http.ResponseWriter, r *http.Request, ps httproute
 func (s *Server) getUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.Atoi(ps.ByName("id"))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	var user User
@@ -144,7 +144,7 @@ func (s *Server) getUser(w http.ResponseWriter, r *http.Request, ps httprouter.P
 func (s *Server) getUserVisits(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.Atoi(ps.ByName("id"))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	var query UserVisitsQuery
@@ -190,7 +190,7 @@ func (s *Server) updateLocation(w http.ResponseWriter, r *http.Request, ps httpr
 	}
 	id, err := strconv.Atoi(ps.ByName("id"))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	var location Location
@@ -217,7 +217,7 @@ func (s *Server) updateLocation(w http.ResponseWriter, r *http.Request, ps httpr
 func (s *Server) getLocation(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.Atoi(ps.ByName("id"))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	var location Location
@@ -231,7 +231,7 @@ func (s *Server) getLocation(w http.ResponseWriter, r *http.Request, ps httprout
 func (s *Server) getLocationAvg(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.Atoi(ps.ByName("id"))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	var query LocationAvgQuery
@@ -274,7 +274,7 @@ func (s *Server) updateVisit(w http.ResponseWriter, r *http.Request, ps httprout
 	}
 	id, err := strconv.Atoi(ps.ByName("id"))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	var visit Visit
@@ -301,7 +301,7 @@ func (s *Server) updateVisit(w http.ResponseWriter, r *http.Request, ps httprout
 func (s *Server) getVisit(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	id, err := strconv.Atoi(ps.ByName("id"))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	var visit Visit

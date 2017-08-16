@@ -142,7 +142,7 @@ func TestHandlers(t *testing.T) {
 			name:       "UpdateUser/InvalidID",
 			handler:    srv.updateUser,
 			entityID:   "a",
-			statusCode: http.StatusBadRequest,
+			statusCode: http.StatusNotFound,
 		},
 		{
 			name:       "UpdateUser/NotFound",
@@ -232,7 +232,7 @@ func TestHandlers(t *testing.T) {
 			name:       "GetUser/InvalidID",
 			handler:    srv.getUser,
 			entityID:   "a",
-			statusCode: http.StatusBadRequest,
+			statusCode: http.StatusNotFound,
 		},
 		{
 			name:       "GetUser/NotFound",
@@ -279,7 +279,7 @@ func TestHandlers(t *testing.T) {
 			name:       "GetUserVisits/InvalidID",
 			handler:    srv.getUserVisits,
 			entityID:   "a",
-			statusCode: http.StatusBadRequest,
+			statusCode: http.StatusNotFound,
 		},
 		{
 			name:       "GetUserVisits/NotFound",
@@ -423,7 +423,7 @@ func TestHandlers(t *testing.T) {
 			name:       "UpdateLocation/InvalidID",
 			handler:    srv.updateLocation,
 			entityID:   "a",
-			statusCode: http.StatusBadRequest,
+			statusCode: http.StatusNotFound,
 		},
 		{
 			name:       "UpdateLocation/NotFound",
@@ -512,7 +512,7 @@ func TestHandlers(t *testing.T) {
 			name:       "GetLocation/InvalidID",
 			handler:    srv.getLocation,
 			entityID:   "a",
-			statusCode: http.StatusBadRequest,
+			statusCode: http.StatusNotFound,
 		},
 		{
 			name:       "GetLocation/NotFound",
@@ -544,7 +544,7 @@ func TestHandlers(t *testing.T) {
 			name:       "GetLocationAvg/InvalidID",
 			handler:    srv.getLocationAvg,
 			entityID:   "a",
-			statusCode: http.StatusBadRequest,
+			statusCode: http.StatusNotFound,
 		},
 		{
 			name:       "GetLocationAvg/NotFound",
@@ -671,7 +671,7 @@ func TestHandlers(t *testing.T) {
 			name:       "UpdateVisit/InvalidID",
 			handler:    srv.updateVisit,
 			entityID:   "a",
-			statusCode: http.StatusBadRequest,
+			statusCode: http.StatusNotFound,
 		},
 		{
 			name:       "UpdateVisit/NotFound",
@@ -760,7 +760,7 @@ func TestHandlers(t *testing.T) {
 			name:       "GetVisit/InvalidID",
 			handler:    srv.getVisit,
 			entityID:   "a",
-			statusCode: http.StatusBadRequest,
+			statusCode: http.StatusNotFound,
 		},
 		{
 			name:       "GetVisit/NotFound",
