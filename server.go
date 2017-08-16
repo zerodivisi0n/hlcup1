@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/gorilla/schema"
 	"github.com/julienschmidt/httprouter"
 	log "github.com/sirupsen/logrus"
 	validator "gopkg.in/go-playground/validator.v9"
@@ -16,7 +17,7 @@ type Store interface {
 	CreateUser(u *User) error
 	UpdateUser(id int, u *User) error
 	GetUser(id int, u *User) error
-	GetUserVisits(id int, visits *[]UserVisit) error
+	GetUserVisits(id int, q *UserVisitsQuery, visits *[]UserVisit) error
 
 	// Location methods
 	CreateLocation(l *Location) error
@@ -34,16 +35,20 @@ type Store interface {
 }
 
 type Server struct {
-	store     Store
-	validator *validator.Validate
+	store        Store
+	validator    *validator.Validate
+	queryDecoder *schema.Decoder
 }
 
 func NewServer(store Store) *Server {
 	v := validator.New()
 	v.RegisterCustomTypeFunc(ValidateTimestamp, Timestamp{})
+	d := schema.NewDecoder()
+	d.IgnoreUnknownKeys(true)
 	return &Server{
-		store:     store,
-		validator: v,
+		store:        store,
+		validator:    v,
+		queryDecoder: d,
 	}
 }
 
@@ -142,8 +147,13 @@ func (s *Server) getUserVisits(w http.ResponseWriter, r *http.Request, ps httpro
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	var query UserVisitsQuery
+	if err := s.queryDecoder.Decode(&query, r.URL.Query()); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	var visits []UserVisit
-	if err := s.store.GetUserVisits(id, &visits); err != nil {
+	if err := s.store.GetUserVisits(id, &query, &visits); err != nil {
 		handleDbError(w, err)
 		return
 	}

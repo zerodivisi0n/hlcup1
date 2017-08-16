@@ -47,7 +47,7 @@ func (s *MongoStore) GetUser(id int, u *User) error {
 	})
 }
 
-func (s *MongoStore) GetUserVisits(id int, visits *[]UserVisit) error {
+func (s *MongoStore) GetUserVisits(id int, q *UserVisitsQuery, visits *[]UserVisit) error {
 	return s.withSession(func(s *mgo.Session) error {
 		// Check users exists
 		c, err := usersCollection(s).FindId(id).Count()
@@ -58,13 +58,7 @@ func (s *MongoStore) GetUserVisits(id int, visits *[]UserVisit) error {
 			return mgo.ErrNotFound
 		}
 		// Query visits
-		return visitsCollection(s).Pipe([]bson.M{
-			{"$match": bson.M{"u": id}}, // filter by user
-			{"$sort": bson.M{"v": 1}},   // ascending order
-			{"$lookup": bson.M{"from": "locations", "localField": "l", "foreignField": "_id", "as": "location"}}, // join location
-			{"$unwind": "$location"},                                           // unwind location array
-			{"$project": bson.M{"_id": 0, "m": 1, "v": 1, "p": "$location.p"}}, // build result
-		}).All(visits)
+		return visitsCollection(s).Pipe(userVisitsPipeline(id, q)).All(visits)
 	})
 }
 
@@ -155,4 +149,35 @@ func locationsCollection(s *mgo.Session) *mgo.Collection {
 
 func visitsCollection(s *mgo.Session) *mgo.Collection {
 	return s.DB("").C("visits")
+}
+
+func userVisitsPipeline(id int, q *UserVisitsQuery) []bson.M {
+	matchStage := bson.M{"u": id}
+	if !q.FromDate.Time.IsZero() && !q.ToDate.Time.IsZero() {
+		matchStage["v"] = bson.M{
+			"$gt": q.FromDate.Time,
+			"$lt": q.ToDate.Time,
+		}
+	} else if !q.FromDate.Time.IsZero() {
+		matchStage["v"] = bson.M{"$gt": q.FromDate.Time}
+	} else if !q.ToDate.Time.IsZero() {
+		matchStage["v"] = bson.M{"$lt": q.ToDate.Time}
+	}
+
+	filterStage := bson.M{}
+	if q.Country != "" {
+		filterStage["loc.co"] = q.Country
+	}
+	if q.ToDistance != 0 {
+		filterStage["loc.d"] = bson.M{"$lt": q.ToDistance}
+	}
+
+	return []bson.M{
+		{"$match": matchStage},                                                                          // filter by user
+		{"$sort": bson.M{"v": 1}},                                                                       // ascending order
+		{"$lookup": bson.M{"from": "locations", "localField": "l", "foreignField": "_id", "as": "loc"}}, // join location
+		{"$unwind": "$loc"},                                           // unwind location array
+		{"$match": filterStage},                                       // filter results by country and distance
+		{"$project": bson.M{"_id": 0, "m": 1, "v": 1, "p": "$loc.p"}}, // build result
+	}
 }

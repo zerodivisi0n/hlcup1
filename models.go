@@ -40,6 +40,13 @@ type UserVisit struct {
 	Place     string    `json:"place" bson:"p"`
 }
 
+type UserVisitsQuery struct {
+	FromDate   Timestamp `schema:"fromDate"`
+	ToDate     Timestamp `schema:"toDate"`
+	Country    string    `schema:"country"`
+	ToDistance int       `schema:"toDistance"`
+}
+
 type Timestamp struct {
 	time.Time
 }
@@ -80,6 +87,10 @@ func (t *Timestamp) SetBSON(raw bson.Raw) error {
 	*t = Timestamp{tm}
 
 	return nil
+}
+
+func (t *Timestamp) UnmarshalText(text []byte) error {
+	return t.UnmarshalJSON(text)
 }
 
 func (t *Timestamp) String() string {

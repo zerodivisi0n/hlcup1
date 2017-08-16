@@ -32,6 +32,7 @@ func TestHandlers(t *testing.T) {
 		handler      httprouter.Handle
 		entityID     string
 		request      string
+		query        string
 		response     string
 		statusCode   int
 		storeMethods []StoreMethod
@@ -240,10 +241,10 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUserVisits",
-					args:       []interface{}{1, mock.AnythingOfType("*[]main.UserVisit")},
+					args:       []interface{}{1, mock.AnythingOfType("*main.UserVisitsQuery"), mock.AnythingOfType("*[]main.UserVisit")},
 					returnArgs: []interface{}{nil},
 					run: func(args mock.Arguments) {
-						visits := args.Get(1).(*[]UserVisit)
+						visits := args.Get(2).(*[]UserVisit)
 						*visits = []UserVisit{
 							{
 								Mark:      5,
@@ -274,7 +275,7 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUserVisits",
-					args:       []interface{}{999, mock.AnythingOfType("*[]main.UserVisit")},
+					args:       []interface{}{999, mock.AnythingOfType("*main.UserVisitsQuery"), mock.AnythingOfType("*[]main.UserVisit")},
 					returnArgs: []interface{}{mgo.ErrNotFound},
 				},
 			},
@@ -287,7 +288,46 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUserVisits",
-					args:       []interface{}{2, mock.AnythingOfType("*[]main.UserVisit")},
+					args:       []interface{}{2, mock.AnythingOfType("*main.UserVisitsQuery"), mock.AnythingOfType("*[]main.UserVisit")},
+					returnArgs: []interface{}{nil},
+				},
+			},
+		},
+		{
+			name:     "GetUserVisits/WithQuery",
+			handler:  srv.getUserVisits,
+			entityID: "1",
+			query:    "?fromDate=53636439",
+			response: `{"visits":[]}` + "\n",
+			storeMethods: []StoreMethod{
+				{
+					method:     "GetUserVisits",
+					args:       []interface{}{1, mock.AnythingOfType("*main.UserVisitsQuery"), mock.AnythingOfType("*[]main.UserVisit")},
+					returnArgs: []interface{}{nil},
+					run: func(args mock.Arguments) {
+						query := args.Get(1).(*UserVisitsQuery)
+						assert.Equal(t, Timestamp{time.Unix(53636439, 0)}, query.FromDate)
+					},
+				},
+			},
+		},
+		{
+			name:       "GetUserVisits/WithInvalidQuery",
+			handler:    srv.getUserVisits,
+			entityID:   "1",
+			query:      "?toDate=a",
+			statusCode: http.StatusBadRequest,
+		},
+		{
+			name:     "GetUserVisits/WithUnknownQuery",
+			handler:  srv.getUserVisits,
+			entityID: "1",
+			query:    "?unknown=value",
+			response: `{"visits":[]}` + "\n",
+			storeMethods: []StoreMethod{
+				{
+					method:     "GetUserVisits",
+					args:       []interface{}{1, &UserVisitsQuery{}, mock.AnythingOfType("*[]main.UserVisit")},
 					returnArgs: []interface{}{nil},
 				},
 			},
@@ -695,7 +735,7 @@ func TestHandlers(t *testing.T) {
 			if tc.request != "" {
 				body = strings.NewReader(tc.request)
 			}
-			req, err := http.NewRequest("GET", "/test/request", body)
+			req, err := http.NewRequest("GET", "/test/request"+tc.query, body)
 			if err != nil {
 				t.Fatalf("could not create request: %v", err)
 			}
