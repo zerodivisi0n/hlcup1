@@ -57,9 +57,8 @@ func loadData(store Store, filepath string) error {
 	defer r.Close()
 
 	for _, f := range r.File {
-		// process only .json files in data/data directory
-		if !strings.HasPrefix(f.Name, "data/data") ||
-			!strings.HasSuffix(f.Name, ".json") {
+		// process only .json files
+		if !strings.HasSuffix(f.Name, ".json") {
 			continue
 		}
 		log.Infof("Processing file %s", f.Name)
