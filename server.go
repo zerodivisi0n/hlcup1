@@ -16,7 +16,7 @@ type Store interface {
 	CreateUser(u *User) error
 	UpdateUser(id int, u *User) error
 	GetUser(id int, u *User) error
-	GetUserVisits(id int, visits *[]Visit) error
+	GetUserVisits(id int, visits *[]UserVisit) error
 
 	// Location methods
 	CreateLocation(l *Location) error
@@ -142,13 +142,13 @@ func (s *Server) getUserVisits(w http.ResponseWriter, r *http.Request, ps httpro
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	var visits []Visit
+	var visits []UserVisit
 	if err := s.store.GetUserVisits(id, &visits); err != nil {
 		handleDbError(w, err)
 		return
 	}
 	if len(visits) == 0 {
-		visits = make([]Visit, 0)
+		visits = make([]UserVisit, 0)
 	}
 	jsonResponse(w, map[string]interface{}{
 		"visits": visits,

@@ -47,9 +47,24 @@ func (s *MongoStore) GetUser(id int, u *User) error {
 	})
 }
 
-func (s *MongoStore) GetUserVisits(id int, visits *[]Visit) error {
+func (s *MongoStore) GetUserVisits(id int, visits *[]UserVisit) error {
 	return s.withSession(func(s *mgo.Session) error {
-		return visitsCollection(s).Find(bson.M{"u": id}).Sort("v").All(visits)
+		// Check users exists
+		c, err := usersCollection(s).FindId(id).Count()
+		if err != nil {
+			return err
+		}
+		if c == 0 {
+			return mgo.ErrNotFound
+		}
+		// Query visits
+		return visitsCollection(s).Pipe([]bson.M{
+			{"$match": bson.M{"u": id}}, // filter by user
+			{"$sort": bson.M{"v": 1}},   // ascending order
+			{"$lookup": bson.M{"from": "locations", "localField": "l", "foreignField": "_id", "as": "location"}}, // join location
+			{"$unwind": "$location"},                                           // unwind location array
+			{"$project": bson.M{"_id": 0, "m": 1, "v": 1, "p": "$location.p"}}, // build result
+		}).All(visits)
 	})
 }
 

@@ -236,27 +236,24 @@ func TestHandlers(t *testing.T) {
 			name:     "GetUserVisits",
 			handler:  srv.getUserVisits,
 			entityID: "1",
-			response: `{"visits":[{"id":35,"user":1,"location":10,"visited_at":5000000,"mark":5},{"id":67,"user":1,"location":67,"visited_at":20732957,"mark":0}]}` + "\n",
+			response: `{"visits":[{"mark":5,"visited_at":5000000,"place":"First Place"},{"mark":3,"visited_at":20732957,"place":"Another Place"}]}` + "\n",
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUserVisits",
-					args:       []interface{}{1, mock.AnythingOfType("*[]main.Visit")},
+					args:       []interface{}{1, mock.AnythingOfType("*[]main.UserVisit")},
 					returnArgs: []interface{}{nil},
 					run: func(args mock.Arguments) {
-						visits := args.Get(1).(*[]Visit)
-						*visits = []Visit{
+						visits := args.Get(1).(*[]UserVisit)
+						*visits = []UserVisit{
 							{
-								ID:         35,
-								UserID:     1,
-								LocationID: 10,
-								VisitedAt:  Timestamp{time.Unix(5000000, 0)},
-								Mark:       5,
+								Mark:      5,
+								VisitedAt: Timestamp{time.Unix(5000000, 0)},
+								Place:     "First Place",
 							},
 							{
-								ID:         67,
-								UserID:     1,
-								LocationID: 67,
-								VisitedAt:  Timestamp{time.Unix(20732957, 0)},
+								Mark:      3,
+								VisitedAt: Timestamp{time.Unix(20732957, 0)},
+								Place:     "Another Place",
 							},
 						}
 					},
@@ -277,7 +274,7 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUserVisits",
-					args:       []interface{}{999, mock.AnythingOfType("*[]main.Visit")},
+					args:       []interface{}{999, mock.AnythingOfType("*[]main.UserVisit")},
 					returnArgs: []interface{}{mgo.ErrNotFound},
 				},
 			},
@@ -290,7 +287,7 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUserVisits",
-					args:       []interface{}{2, mock.AnythingOfType("*[]main.Visit")},
+					args:       []interface{}{2, mock.AnythingOfType("*[]main.UserVisit")},
 					returnArgs: []interface{}{nil},
 				},
 			},

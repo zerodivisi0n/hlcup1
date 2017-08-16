@@ -18,7 +18,7 @@ func (m *MockStore) GetUser(id int, u *User) error {
 	return m.Called(id, u).Error(0)
 }
 
-func (m *MockStore) GetUserVisits(id int, visits *[]Visit) error {
+func (m *MockStore) GetUserVisits(id int, visits *[]UserVisit) error {
 	return m.Called(id, visits).Error(0)
 }
 

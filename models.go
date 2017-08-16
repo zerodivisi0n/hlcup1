@@ -34,6 +34,12 @@ type Visit struct {
 	Mark       int       `json:"mark" bson:"m" validate:"omitempty,gte=0,lte=5"`
 }
 
+type UserVisit struct {
+	Mark      int       `json:"mark" bson:"m"`
+	VisitedAt Timestamp `json:"visited_at" bson:"v"`
+	Place     string    `json:"place" bson:"p"`
+}
+
 type Timestamp struct {
 	time.Time
 }
