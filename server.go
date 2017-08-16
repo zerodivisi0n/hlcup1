@@ -23,7 +23,7 @@ type Store interface {
 	CreateLocation(l *Location) error
 	UpdateLocation(id int, l *Location) error
 	GetLocation(id int, l *Location) error
-	GetLocationAvg(id int) (float32, error)
+	GetLocationAvg(id int, q *LocationAvgQuery) (float64, error)
 
 	// Visit methods
 	CreateVisit(v *Visit) error
@@ -234,7 +234,12 @@ func (s *Server) getLocationAvg(w http.ResponseWriter, r *http.Request, ps httpr
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	avg, err := s.store.GetLocationAvg(id)
+	var query LocationAvgQuery
+	if err := s.queryDecoder.Decode(&query, r.URL.Query()); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	avg, err := s.store.GetLocationAvg(id, &query)
 	if err != nil {
 		handleDbError(w, err)
 		return

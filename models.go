@@ -47,6 +47,14 @@ type UserVisitsQuery struct {
 	ToDistance int       `schema:"toDistance"`
 }
 
+type LocationAvgQuery struct {
+	FromDate Timestamp `schema:"fromDate"`
+	ToDate   Timestamp `schema:"toDate"`
+	FromAge  int       `schema:"fromAge"`
+	ToAge    int       `schema:"toAge"`
+	Gender   string    `schema:"gender"`
+}
+
 type Timestamp struct {
 	time.Time
 }

@@ -34,10 +34,10 @@ func (m *MockStore) GetLocation(id int, l *Location) error {
 	return m.Called(id, l).Error(0)
 }
 
-func (m *MockStore) GetLocationAvg(id int) (float32, error) {
-	args := m.Called(id)
+func (m *MockStore) GetLocationAvg(id int, q *LocationAvgQuery) (float64, error) {
+	args := m.Called(id, q)
 	avg, _ := args.Get(0).(float64)
-	return float32(avg), args.Error(1)
+	return avg, args.Error(1)
 }
 
 func (m *MockStore) CreateVisit(v *Visit) error {

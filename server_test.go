@@ -521,7 +521,7 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetLocationAvg",
-					args:       []interface{}{1},
+					args:       []interface{}{1, &LocationAvgQuery{}},
 					returnArgs: []interface{}{4.375, nil},
 				},
 			},
@@ -540,8 +540,43 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetLocationAvg",
-					args:       []interface{}{999},
+					args:       []interface{}{999, &LocationAvgQuery{}},
 					returnArgs: []interface{}{0, mgo.ErrNotFound},
+				},
+			},
+		},
+		{
+			name:     "GetLocationAvg/WithQuery",
+			handler:  srv.getLocationAvg,
+			entityID: "1",
+			query:    "?fromAge=30&toAge=40&gender=m",
+			response: `{"avg":2.664}` + "\n",
+			storeMethods: []StoreMethod{
+				{
+					method:     "GetLocationAvg",
+					args:       []interface{}{1, &LocationAvgQuery{FromAge: 30, ToAge: 40, Gender: "m"}},
+					returnArgs: []interface{}{2.664, nil},
+				},
+			},
+		},
+		{
+			name:       "GetLocationAvg/WithInvalidQuery",
+			handler:    srv.getLocationAvg,
+			entityID:   "1",
+			query:      "?toDate=a",
+			statusCode: http.StatusBadRequest,
+		},
+		{
+			name:     "GetLocationAvg/WithUnknownQuery",
+			handler:  srv.getLocationAvg,
+			entityID: "200",
+			query:    "?unknown=value",
+			response: `{"avg":0}` + "\n",
+			storeMethods: []StoreMethod{
+				{
+					method:     "GetLocationAvg",
+					args:       []interface{}{200, &LocationAvgQuery{}},
+					returnArgs: []interface{}{0, nil},
 				},
 			},
 		},
