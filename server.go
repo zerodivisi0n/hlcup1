@@ -240,6 +240,10 @@ func (s *Server) getLocationAvg(w http.ResponseWriter, r *http.Request, ps httpr
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	if err := s.validator.Struct(&query); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	avg, err := s.store.GetLocationAvg(id, &query)
 	if err != nil {
 		handleDbError(w, err)

@@ -675,6 +675,13 @@ func TestHandlers(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:       "GetLocationAvg/ValidateQuery",
+			handler:    srv.getLocationAvg,
+			entityID:   "15",
+			query:      "?gender=asd",
+			statusCode: http.StatusBadRequest,
+		},
 		//-------------------------------
 		// Visit endpoints tests
 		//-------------------------------

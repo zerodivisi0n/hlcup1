@@ -53,7 +53,7 @@ type LocationAvgQuery struct {
 	ToDate   Timestamp `schema:"toDate"`
 	FromAge  int       `schema:"fromAge"`
 	ToAge    int       `schema:"toAge"`
-	Gender   string    `schema:"gender"`
+	Gender   string    `schema:"gender" validate:"omitempty,eq=m|eq=f"`
 }
 
 type Timestamp struct {
