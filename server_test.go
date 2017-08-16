@@ -111,6 +111,13 @@ func TestHandlers(t *testing.T) {
 			},
 		},
 		{
+			name:       "CreateUser/WithNullField",
+			handler:    srv.updateUser,
+			entityID:   "new",
+			request:    `{"id":1,"first_name":"First","last_name":"User","email":null,"gender":"m","birth_date":100000}`,
+			statusCode: http.StatusBadRequest,
+		},
+		{
 			name:     "UpdateUser",
 			handler:  srv.updateUser,
 			entityID: "1",
@@ -201,6 +208,33 @@ func TestHandlers(t *testing.T) {
 					method:     "UpdateUser",
 					args:       []interface{}{1, mock.AnythingOfType("*main.User")},
 					returnArgs: []interface{}{ErrUpdateID},
+				},
+			},
+		},
+		{
+			name:     "UpdateUser/WithNullField",
+			handler:  srv.updateUser,
+			entityID: "1",
+			request: `{
+				"email": null
+			}`,
+			statusCode: http.StatusBadRequest,
+			storeMethods: []StoreMethod{
+				{
+					method:     "GetUser",
+					args:       []interface{}{1, mock.AnythingOfType("*main.User")},
+					returnArgs: []interface{}{nil},
+					run: func(args mock.Arguments) {
+						user := args.Get(1).(*User)
+						*user = User{
+							ID:        1,
+							FirstName: "First",
+							LastName:  "User",
+							Email:     "foo@bar.com",
+							Gender:    "m",
+							BirthDate: Timestamp{time.Unix(100000, 0)},
+						}
+					},
 				},
 			},
 		},
@@ -378,6 +412,13 @@ func TestHandlers(t *testing.T) {
 			statusCode: http.StatusBadRequest,
 		},
 		{
+			name:       "CreateLocation/WithNullField",
+			handler:    srv.updateLocation,
+			entityID:   "new",
+			request:    `{"id":1,"city":"Moscow","country":"Russia","place":"Some Place","distance":null}`,
+			statusCode: http.StatusBadRequest,
+		},
+		{
 			name:       "CreateUser/DatabaseError",
 			handler:    srv.updateLocation,
 			entityID:   "new",
@@ -463,6 +504,33 @@ func TestHandlers(t *testing.T) {
 					method:     "GetLocation",
 					args:       []interface{}{1, mock.AnythingOfType("*main.Location")},
 					returnArgs: []interface{}{nil},
+				},
+			},
+		},
+		{
+			name:       "UpdateLocation/WithNullField",
+			handler:    srv.updateLocation,
+			entityID:   "1",
+			statusCode: http.StatusBadRequest,
+			request: `{
+				"city": null,
+				"place": "River"
+			}`,
+			storeMethods: []StoreMethod{
+				{
+					method:     "GetLocation",
+					args:       []interface{}{1, mock.AnythingOfType("*main.Location")},
+					returnArgs: []interface{}{nil},
+					run: func(args mock.Arguments) {
+						location := args.Get(1).(*Location)
+						*location = Location{
+							ID:       1,
+							Country:  "Russia",
+							City:     "Moscow",
+							Place:    "Some Place",
+							Distance: 150,
+						}
+					},
 				},
 			},
 		},
@@ -639,6 +707,13 @@ func TestHandlers(t *testing.T) {
 			statusCode: http.StatusBadRequest,
 		},
 		{
+			name:       "CreateVisit/WithNullField",
+			handler:    srv.updateVisit,
+			entityID:   "new",
+			request:    `{"id":100,"user":1,"location":15,"visited_at":null,"mark":5}`,
+			statusCode: http.StatusBadRequest,
+		},
+		{
 			name:       "CreateVisit/DatabaseError",
 			handler:    srv.updateVisit,
 			entityID:   "new",
@@ -724,6 +799,33 @@ func TestHandlers(t *testing.T) {
 					method:     "GetVisit",
 					args:       []interface{}{1, mock.AnythingOfType("*main.Visit")},
 					returnArgs: []interface{}{nil},
+				},
+			},
+		},
+		{
+			name:     "UpdateVisit/WithNullField",
+			handler:  srv.updateVisit,
+			entityID: "1",
+			request: `{
+				"user": null,
+				"location": 51530
+			}`,
+			statusCode: http.StatusBadRequest,
+			storeMethods: []StoreMethod{
+				{
+					method:     "GetVisit",
+					args:       []interface{}{1, mock.AnythingOfType("*main.Visit")},
+					returnArgs: []interface{}{nil},
+					run: func(args mock.Arguments) {
+						visit := args.Get(1).(*Visit)
+						*visit = Visit{
+							ID:         99,
+							UserID:     1,
+							LocationID: 72,
+							VisitedAt:  Timestamp{time.Unix(1268006400, 0)},
+							Mark:       2,
+						}
+					},
 				},
 			},
 		},

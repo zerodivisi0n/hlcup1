@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -72,7 +73,7 @@ func (t *Timestamp) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	t.Time = time.Unix(int64(ts), 0)
+	t.SetUnix(int64(ts))
 
 	return nil
 }
@@ -105,10 +106,122 @@ func (t *Timestamp) String() string {
 	return time.Time(t.Time).String()
 }
 
+func (t *Timestamp) SetUnix(ts int64) {
+	t.Time = time.Unix(ts, 0)
+}
+
 func ValidateTimestamp(field reflect.Value) interface{} {
 	if timestamp, ok := field.Interface().(Timestamp); ok {
 		if !timestamp.Time.IsZero() {
 			return timestamp.Time.Unix()
+		}
+	}
+	return nil
+}
+
+// Custom unmarshalers
+func (u *User) UnmarshalJSON(b []byte) error {
+	kv := map[string]interface{}{}
+	if err := json.Unmarshal(b, &kv); err != nil {
+		return err
+	}
+	for k, v := range kv {
+		var ok bool
+		switch k {
+		case "id":
+			var id float64
+			if id, ok = v.(float64); ok {
+				u.ID = int(id)
+			}
+		case "first_name":
+			u.FirstName, ok = v.(string)
+		case "last_name":
+			u.LastName, ok = v.(string)
+		case "email":
+			u.Email, ok = v.(string)
+		case "gender":
+			u.Gender, ok = v.(string)
+		case "birth_date":
+			var ts float64
+			if ts, ok = v.(float64); ok {
+				u.BirthDate.SetUnix(int64(ts))
+			}
+		}
+		if !ok {
+			return fmt.Errorf("Invalid type %T for key '%s'", v, k)
+		}
+	}
+	return nil
+}
+
+func (l *Location) UnmarshalJSON(b []byte) error {
+	kv := map[string]interface{}{}
+	if err := json.Unmarshal(b, &kv); err != nil {
+		return err
+	}
+	for k, v := range kv {
+		var ok bool
+		switch k {
+		case "id":
+			var id float64
+			if id, ok = v.(float64); ok {
+				l.ID = int(id)
+			}
+		case "city":
+			l.City, ok = v.(string)
+		case "country":
+			l.Country, ok = v.(string)
+		case "place":
+			l.Place, ok = v.(string)
+		case "distance":
+			var d float64
+			if d, ok = v.(float64); ok {
+				l.Distance = int(d)
+			}
+		}
+		if !ok {
+			return fmt.Errorf("Invalid type %T for key '%s'", v, k)
+		}
+	}
+	return nil
+}
+
+func (vi *Visit) UnmarshalJSON(b []byte) error {
+	kv := map[string]interface{}{}
+	if err := json.Unmarshal(b, &kv); err != nil {
+		return err
+	}
+	for k, v := range kv {
+		var ok bool
+		switch k {
+		case "id":
+			var id float64
+			if id, ok = v.(float64); ok {
+				vi.ID = int(id)
+			}
+		case "user":
+			var id float64
+			if id, ok = v.(float64); ok {
+				vi.UserID = int(id)
+			}
+		case "location":
+			var id float64
+			if id, ok = v.(float64); ok {
+				vi.LocationID = int(id)
+			}
+		case "visited_at":
+			var ts float64
+			if ts, ok = v.(float64); ok {
+				vi.VisitedAt.SetUnix(int64(ts))
+			}
+		case "mark":
+			var mark float64
+			if mark, ok = v.(float64); ok {
+				vi.Mark = int(mark)
+			}
+		}
+		if !ok {
+			return fmt.Errorf("Invalid type %T for key '%s'", v, k)
 		}
 	}
 	return nil
