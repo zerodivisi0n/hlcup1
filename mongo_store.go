@@ -19,8 +19,14 @@ type MongoStore struct {
 	s *mgo.Session
 }
 
-func NewMongoStore(s *mgo.Session) *MongoStore {
-	return &MongoStore{s}
+func NewMongoStore(s *mgo.Session) (*MongoStore, error) {
+	if err := visitsCollection(s).EnsureIndexKey("u", "v"); err != nil {
+		return nil, err
+	}
+	if err := visitsCollection(s).EnsureIndexKey("l", "v"); err != nil {
+		return nil, err
+	}
+	return &MongoStore{s}, nil
 }
 
 // User methods

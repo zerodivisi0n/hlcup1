@@ -23,7 +23,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	store := NewMongoStore(session)
+	store, err := NewMongoStore(session)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if err := loadData(store, datapath); err != nil {
 		log.Fatal(err)
