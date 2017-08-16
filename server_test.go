@@ -2,25 +2,21 @@ package main
 
 import (
 	"errors"
-	"fmt"
-	"io"
 	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
-	"strings"
+	"net"
 	"testing"
 	"time"
 
 	mgo "gopkg.in/mgo.v2"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/valyala/fasthttp"
+	"github.com/valyala/fasthttp/fasthttputil"
 )
 
 func TestHandlers(t *testing.T) {
-	srv := NewServer(nil)
 	type StoreMethod struct {
 		method     string
 		args       []interface{}
@@ -29,8 +25,7 @@ func TestHandlers(t *testing.T) {
 	}
 	tt := []struct {
 		name         string
-		handler      httprouter.Handle
-		entityID     string
+		path         string
 		request      string
 		query        string
 		response     string
@@ -42,8 +37,7 @@ func TestHandlers(t *testing.T) {
 		//--------------------------------
 		{
 			name:     "CreateUser",
-			handler:  srv.updateUser,
-			entityID: "new",
+			path:     "/users/new",
 			request:  `{"id":1,"first_name":"First","last_name":"User","email":"foo@bar.com","gender":"m","birth_date":100000}`,
 			response: "{}\n",
 			storeMethods: []StoreMethod{
@@ -56,17 +50,15 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "CreateUser/InvalidBody",
-			handler:    srv.updateUser,
-			entityID:   "new",
+			path:       "/users/new",
 			request:    `{bad-json}`,
-			statusCode: http.StatusBadRequest,
+			statusCode: fasthttp.StatusBadRequest,
 		},
 		{
 			name:       "CreateUser/WithoutID",
-			handler:    srv.updateUser,
-			entityID:   "new",
+			path:       "/users/new",
 			request:    `{"first_name":"User"}`,
-			statusCode: http.StatusBadRequest,
+			statusCode: fasthttp.StatusBadRequest,
 			storeMethods: []StoreMethod{
 				{
 					method:     "CreateUser",
@@ -77,17 +69,15 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "CreateUser/ValidationError",
-			handler:    srv.updateUser,
-			entityID:   "new",
+			path:       "/users/new",
 			request:    `{"first_name":"Alien","gender":"u"}`,
-			statusCode: http.StatusBadRequest,
+			statusCode: fasthttp.StatusBadRequest,
 		},
 		{
 			name:       "CreateUser/DatabaseError",
-			handler:    srv.updateUser,
-			entityID:   "new",
+			path:       "/users/new",
 			request:    `{"id":1,"first_name":"First","last_name":"User","email":"foo@bar.com","gender":"m","birth_date":100000}`,
-			statusCode: http.StatusInternalServerError,
+			statusCode: fasthttp.StatusInternalServerError,
 			storeMethods: []StoreMethod{
 				{
 					method:     "CreateUser",
@@ -98,10 +88,9 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "CreateUser/NonUniqEmail",
-			handler:    srv.updateUser,
-			entityID:   "new",
+			path:       "/users/new",
 			request:    `{"id":1,"first_name":"First","last_name":"User","email":"duplicate@email.com","gender":"m","birth_date":100000}`,
-			statusCode: http.StatusBadRequest,
+			statusCode: fasthttp.StatusBadRequest,
 			storeMethods: []StoreMethod{
 				{
 					method:     "CreateUser",
@@ -112,15 +101,13 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "CreateUser/WithNullField",
-			handler:    srv.updateUser,
-			entityID:   "new",
+			path:       "/users/new",
 			request:    `{"id":1,"first_name":"First","last_name":"User","email":null,"gender":"m","birth_date":100000}`,
-			statusCode: http.StatusBadRequest,
+			statusCode: fasthttp.StatusBadRequest,
 		},
 		{
 			name:     "UpdateUser",
-			handler:  srv.updateUser,
-			entityID: "1",
+			path:     "/users/1",
 			request:  `{"first_name":"Updated"}`,
 			response: "{}\n",
 			storeMethods: []StoreMethod{
@@ -147,15 +134,13 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "UpdateUser/InvalidID",
-			handler:    srv.updateUser,
-			entityID:   "a",
-			statusCode: http.StatusNotFound,
+			path:       "/users/a",
+			statusCode: fasthttp.StatusNotFound,
 		},
 		{
 			name:       "UpdateUser/NotFound",
-			handler:    srv.updateUser,
-			entityID:   "2",
-			statusCode: http.StatusNotFound,
+			path:       "/users/2",
+			statusCode: fasthttp.StatusNotFound,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUser",
@@ -166,9 +151,8 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "UpdateUser/InvalidBody",
-			handler:    srv.updateUser,
-			entityID:   "1",
-			statusCode: http.StatusBadRequest,
+			path:       "/users/1",
+			statusCode: fasthttp.StatusBadRequest,
 			request:    `{bad-json}`,
 			storeMethods: []StoreMethod{
 				{
@@ -180,9 +164,8 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "UpdateUser/ValidationError",
-			handler:    srv.updateUser,
-			entityID:   "1",
-			statusCode: http.StatusBadRequest,
+			path:       "/users/1",
+			statusCode: fasthttp.StatusBadRequest,
 			request:    `{"first_name":"Alien","gender":"u"}`,
 			storeMethods: []StoreMethod{
 				{
@@ -194,9 +177,8 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "UpdateUser/ErrUpdateID",
-			handler:    srv.updateUser,
-			entityID:   "1",
-			statusCode: http.StatusBadRequest,
+			path:       "/users/1",
+			statusCode: fasthttp.StatusBadRequest,
 			request:    `{"id":2,"email": "new@email.com"}`,
 			storeMethods: []StoreMethod{
 				{
@@ -212,13 +194,12 @@ func TestHandlers(t *testing.T) {
 			},
 		},
 		{
-			name:     "UpdateUser/WithNullField",
-			handler:  srv.updateUser,
-			entityID: "1",
+			name: "UpdateUser/WithNullField",
+			path: "/users/1",
 			request: `{
 				"email": null
 			}`,
-			statusCode: http.StatusBadRequest,
+			statusCode: fasthttp.StatusBadRequest,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUser",
@@ -240,8 +221,7 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:     "GetUser",
-			handler:  srv.getUser,
-			entityID: "1",
+			path:     "/users/1",
 			response: `{"id":1,"first_name":"First","last_name":"User","email":"foo@bar.com","gender":"m","birth_date":100000}` + "\n",
 			storeMethods: []StoreMethod{
 				{
@@ -264,15 +244,13 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "GetUser/InvalidID",
-			handler:    srv.getUser,
-			entityID:   "a",
-			statusCode: http.StatusNotFound,
+			path:       "/users/a",
+			statusCode: fasthttp.StatusNotFound,
 		},
 		{
 			name:       "GetUser/NotFound",
-			handler:    srv.getUser,
-			entityID:   "1",
-			statusCode: http.StatusNotFound,
+			path:       "/users/1",
+			statusCode: fasthttp.StatusNotFound,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUser",
@@ -283,8 +261,7 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:     "GetUserVisits",
-			handler:  srv.getUserVisits,
-			entityID: "1",
+			path:     "/users/1/visits",
 			response: `{"visits":[{"mark":5,"visited_at":5000000,"place":"First Place"},{"mark":3,"visited_at":20732957,"place":"Another Place"}]}` + "\n",
 			storeMethods: []StoreMethod{
 				{
@@ -311,15 +288,13 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "GetUserVisits/InvalidID",
-			handler:    srv.getUserVisits,
-			entityID:   "a",
-			statusCode: http.StatusNotFound,
+			path:       "/users/a/visits",
+			statusCode: fasthttp.StatusNotFound,
 		},
 		{
 			name:       "GetUserVisits/NotFound",
-			handler:    srv.getUserVisits,
-			entityID:   "999",
-			statusCode: http.StatusNotFound,
+			path:       "/users/999/visits",
+			statusCode: fasthttp.StatusNotFound,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUserVisits",
@@ -330,8 +305,7 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:     "GetUserVisits/EmptyResults",
-			handler:  srv.getUserVisits,
-			entityID: "2",
+			path:     "/users/2/visits",
 			response: `{"visits":[]}` + "\n",
 			storeMethods: []StoreMethod{
 				{
@@ -343,8 +317,7 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:     "GetUserVisits/WithQuery",
-			handler:  srv.getUserVisits,
-			entityID: "1",
+			path:     "/users/1/visits",
 			query:    "?fromDate=53636439",
 			response: `{"visits":[]}` + "\n",
 			storeMethods: []StoreMethod{
@@ -361,15 +334,13 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "GetUserVisits/WithInvalidQuery",
-			handler:    srv.getUserVisits,
-			entityID:   "1",
+			path:       "/users/1/visits",
 			query:      "?toDate=a",
-			statusCode: http.StatusBadRequest,
+			statusCode: fasthttp.StatusBadRequest,
 		},
 		{
 			name:     "GetUserVisits/WithUnknownQuery",
-			handler:  srv.getUserVisits,
-			entityID: "1",
+			path:     "/users/1/visits",
 			query:    "?unknown=value",
 			response: `{"visits":[]}` + "\n",
 			storeMethods: []StoreMethod{
@@ -385,8 +356,7 @@ func TestHandlers(t *testing.T) {
 		//------------------------------
 		{
 			name:     "CreateLocation",
-			handler:  srv.updateLocation,
-			entityID: "new",
+			path:     "/locations/new",
 			request:  `{"id":1,"city":"Moscow","country":"Russia","place":"Red Square","distance":25}`,
 			response: "{}\n",
 			storeMethods: []StoreMethod{
@@ -399,31 +369,27 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "CreateLocation/InvalidBody",
-			handler:    srv.updateLocation,
-			entityID:   "new",
+			path:       "/locations/new",
 			request:    `{bad-json}`,
-			statusCode: http.StatusBadRequest,
+			statusCode: fasthttp.StatusBadRequest,
 		},
 		{
 			name:       "CreateLocation/ValidationError",
-			handler:    srv.updateLocation,
-			entityID:   "new",
+			path:       "/locations/new",
 			request:    `{"distance":-5}`,
-			statusCode: http.StatusBadRequest,
+			statusCode: fasthttp.StatusBadRequest,
 		},
 		{
 			name:       "CreateLocation/WithNullField",
-			handler:    srv.updateLocation,
-			entityID:   "new",
+			path:       "/locations/new",
 			request:    `{"id":1,"city":"Moscow","country":"Russia","place":"Some Place","distance":null}`,
-			statusCode: http.StatusBadRequest,
+			statusCode: fasthttp.StatusBadRequest,
 		},
 		{
 			name:       "CreateUser/DatabaseError",
-			handler:    srv.updateLocation,
-			entityID:   "new",
+			path:       "/locations/new",
 			request:    `{"id":1,"city":"Moscow","country":"Russia","place":"Some Place","distance":25}`,
-			statusCode: http.StatusInternalServerError,
+			statusCode: fasthttp.StatusInternalServerError,
 			storeMethods: []StoreMethod{
 				{
 					method:     "CreateLocation",
@@ -434,8 +400,7 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:     "UpdateLocation",
-			handler:  srv.updateLocation,
-			entityID: "1",
+			path:     "/locations/1",
 			request:  `{"place":"Another place"}`,
 			response: "{}\n",
 			storeMethods: []StoreMethod{
@@ -462,15 +427,13 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "UpdateLocation/InvalidID",
-			handler:    srv.updateLocation,
-			entityID:   "a",
-			statusCode: http.StatusNotFound,
+			path:       "/locations/a",
+			statusCode: fasthttp.StatusNotFound,
 		},
 		{
 			name:       "UpdateLocation/NotFound",
-			handler:    srv.updateLocation,
-			entityID:   "2",
-			statusCode: http.StatusNotFound,
+			path:       "/locations/2",
+			statusCode: fasthttp.StatusNotFound,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetLocation",
@@ -481,9 +444,8 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "UpdateLocation/InvalidBody",
-			handler:    srv.updateLocation,
-			entityID:   "1",
-			statusCode: http.StatusBadRequest,
+			path:       "/locations/1",
+			statusCode: fasthttp.StatusBadRequest,
 			request:    `{bad-json}`,
 			storeMethods: []StoreMethod{
 				{
@@ -495,9 +457,8 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "UpdateLocation/ValidationError",
-			handler:    srv.updateLocation,
-			entityID:   "1",
-			statusCode: http.StatusBadRequest,
+			path:       "/locations/1",
+			statusCode: fasthttp.StatusBadRequest,
 			request:    `{"distance":-50}`,
 			storeMethods: []StoreMethod{
 				{
@@ -509,9 +470,8 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "UpdateLocation/WithNullField",
-			handler:    srv.updateLocation,
-			entityID:   "1",
-			statusCode: http.StatusBadRequest,
+			path:       "/locations/1",
+			statusCode: fasthttp.StatusBadRequest,
 			request: `{
 				"city": null,
 				"place": "River"
@@ -536,9 +496,8 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "UpdateLocation/ErrUpdateID",
-			handler:    srv.updateLocation,
-			entityID:   "1",
-			statusCode: http.StatusBadRequest,
+			path:       "/locations/1",
+			statusCode: fasthttp.StatusBadRequest,
 			request:    `{"id":2,"place": "another place"}`,
 			storeMethods: []StoreMethod{
 				{
@@ -555,8 +514,7 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:     "GetLocation",
-			handler:  srv.getLocation,
-			entityID: "1",
+			path:     "/locations/1",
 			response: `{"id":1,"city":"Moscow","country":"Russia","place":"Some Place","distance":150}` + "\n",
 			storeMethods: []StoreMethod{
 				{
@@ -578,15 +536,13 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "GetLocation/InvalidID",
-			handler:    srv.getLocation,
-			entityID:   "a",
-			statusCode: http.StatusNotFound,
+			path:       "/locations/a",
+			statusCode: fasthttp.StatusNotFound,
 		},
 		{
 			name:       "GetLocation/NotFound",
-			handler:    srv.getLocation,
-			entityID:   "1",
-			statusCode: http.StatusNotFound,
+			path:       "/locations/1",
+			statusCode: fasthttp.StatusNotFound,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetLocation",
@@ -597,8 +553,7 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:     "GetLocationAvg",
-			handler:  srv.getLocationAvg,
-			entityID: "1",
+			path:     "/locations/1/avg",
 			response: `{"avg":4.375}` + "\n",
 			storeMethods: []StoreMethod{
 				{
@@ -610,15 +565,13 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "GetLocationAvg/InvalidID",
-			handler:    srv.getLocationAvg,
-			entityID:   "a",
-			statusCode: http.StatusNotFound,
+			path:       "/locations/a/avg",
+			statusCode: fasthttp.StatusNotFound,
 		},
 		{
 			name:       "GetLocationAvg/NotFound",
-			handler:    srv.getLocationAvg,
-			entityID:   "999",
-			statusCode: http.StatusNotFound,
+			path:       "/locations/999/avg",
+			statusCode: fasthttp.StatusNotFound,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetLocationAvg",
@@ -629,8 +582,7 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:     "GetLocationAvg/WithQuery",
-			handler:  srv.getLocationAvg,
-			entityID: "1",
+			path:     "/locations/1/avg",
 			query:    "?fromAge=30&toAge=40&gender=m",
 			response: `{"avg":2.664}` + "\n",
 			storeMethods: []StoreMethod{
@@ -643,15 +595,13 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "GetLocationAvg/WithInvalidQuery",
-			handler:    srv.getLocationAvg,
-			entityID:   "1",
+			path:       "/locations/1/avg",
 			query:      "?toDate=a",
-			statusCode: http.StatusBadRequest,
+			statusCode: fasthttp.StatusBadRequest,
 		},
 		{
 			name:     "GetLocationAvg/WithUnknownQuery",
-			handler:  srv.getLocationAvg,
-			entityID: "200",
+			path:     "/locations/200/avg",
 			query:    "?unknown=value",
 			response: `{"avg":0}` + "\n",
 			storeMethods: []StoreMethod{
@@ -664,8 +614,7 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:     "GetLocationAvg/Rounding",
-			handler:  srv.getLocationAvg,
-			entityID: "15",
+			path:     "/locations/15/avg",
 			response: `{"avg":2.65217}` + "\n",
 			storeMethods: []StoreMethod{
 				{
@@ -677,18 +626,16 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "GetLocationAvg/ValidateQuery",
-			handler:    srv.getLocationAvg,
-			entityID:   "15",
+			path:       "/locations/15/avg",
 			query:      "?gender=asd",
-			statusCode: http.StatusBadRequest,
+			statusCode: fasthttp.StatusBadRequest,
 		},
 		//-------------------------------
 		// Visit endpoints tests
 		//-------------------------------
 		{
 			name:     "CreateVisit",
-			handler:  srv.updateVisit,
-			entityID: "new",
+			path:     "/visits/new",
 			request:  `{"id":100,"user":1,"location":15,"visited_at":1268006400,"mark":5}`,
 			response: "{}\n",
 			storeMethods: []StoreMethod{
@@ -701,31 +648,27 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "CreateVisit/InvalidBody",
-			handler:    srv.updateVisit,
-			entityID:   "new",
+			path:       "/visits/new",
 			request:    `{bad-json}`,
-			statusCode: http.StatusBadRequest,
+			statusCode: fasthttp.StatusBadRequest,
 		},
 		{
 			name:       "CreateVisit/ValidationError",
-			handler:    srv.updateVisit,
-			entityID:   "new",
+			path:       "/visits/new",
 			request:    `{"mark":-10}`,
-			statusCode: http.StatusBadRequest,
+			statusCode: fasthttp.StatusBadRequest,
 		},
 		{
 			name:       "CreateVisit/WithNullField",
-			handler:    srv.updateVisit,
-			entityID:   "new",
+			path:       "/visits/new",
 			request:    `{"id":100,"user":1,"location":15,"visited_at":null,"mark":5}`,
-			statusCode: http.StatusBadRequest,
+			statusCode: fasthttp.StatusBadRequest,
 		},
 		{
 			name:       "CreateVisit/DatabaseError",
-			handler:    srv.updateVisit,
-			entityID:   "new",
+			path:       "/visits/new",
 			request:    `{"id":100,"user":1,"location":15,"visited_at":1268006400,"mark":5}`,
-			statusCode: http.StatusInternalServerError,
+			statusCode: fasthttp.StatusInternalServerError,
 			storeMethods: []StoreMethod{
 				{
 					method:     "CreateVisit",
@@ -736,8 +679,7 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:     "UpdateVisit",
-			handler:  srv.updateVisit,
-			entityID: "100",
+			path:     "/visits/100",
 			request:  `{"mark":4}`,
 			response: "{}\n",
 			storeMethods: []StoreMethod{
@@ -764,15 +706,13 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "UpdateVisit/InvalidID",
-			handler:    srv.updateVisit,
-			entityID:   "a",
-			statusCode: http.StatusNotFound,
+			path:       "/visits/a",
+			statusCode: fasthttp.StatusNotFound,
 		},
 		{
 			name:       "UpdateVisit/NotFound",
-			handler:    srv.updateVisit,
-			entityID:   "998",
-			statusCode: http.StatusNotFound,
+			path:       "/visits/998",
+			statusCode: fasthttp.StatusNotFound,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetVisit",
@@ -783,9 +723,8 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "UpdateVisit/InvalidBody",
-			handler:    srv.updateVisit,
-			entityID:   "1",
-			statusCode: http.StatusBadRequest,
+			path:       "/visits/1",
+			statusCode: fasthttp.StatusBadRequest,
 			request:    `{bad-json}`,
 			storeMethods: []StoreMethod{
 				{
@@ -797,9 +736,8 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "UpdateVisit/ValidationError",
-			handler:    srv.updateVisit,
-			entityID:   "1",
-			statusCode: http.StatusBadRequest,
+			path:       "/visits/1",
+			statusCode: fasthttp.StatusBadRequest,
 			request:    `{"visited_at":900000000}`,
 			storeMethods: []StoreMethod{
 				{
@@ -810,14 +748,13 @@ func TestHandlers(t *testing.T) {
 			},
 		},
 		{
-			name:     "UpdateVisit/WithNullField",
-			handler:  srv.updateVisit,
-			entityID: "1",
+			name: "UpdateVisit/WithNullField",
+			path: "/visits/1",
 			request: `{
 				"user": null,
 				"location": 51530
 			}`,
-			statusCode: http.StatusBadRequest,
+			statusCode: fasthttp.StatusBadRequest,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetVisit",
@@ -838,9 +775,8 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "UpdateVisit/ErrUpdateID",
-			handler:    srv.updateVisit,
-			entityID:   "1",
-			statusCode: http.StatusBadRequest,
+			path:       "/visits/1",
+			statusCode: fasthttp.StatusBadRequest,
 			request:    `{"id":2,"mark": 5}`,
 			storeMethods: []StoreMethod{
 				{
@@ -857,8 +793,7 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:     "GetVisit",
-			handler:  srv.getVisit,
-			entityID: "99",
+			path:     "/visits/99",
 			response: `{"id":99,"user":1,"location":72,"visited_at":378654317,"mark":2}` + "\n",
 			storeMethods: []StoreMethod{
 				{
@@ -880,15 +815,13 @@ func TestHandlers(t *testing.T) {
 		},
 		{
 			name:       "GetVisit/InvalidID",
-			handler:    srv.getVisit,
-			entityID:   "a",
-			statusCode: http.StatusNotFound,
+			path:       "/visits/a",
+			statusCode: fasthttp.StatusNotFound,
 		},
 		{
 			name:       "GetVisit/NotFound",
-			handler:    srv.getVisit,
-			entityID:   "1",
-			statusCode: http.StatusNotFound,
+			path:       "/visits/1",
+			statusCode: fasthttp.StatusNotFound,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetVisit",
@@ -900,24 +833,12 @@ func TestHandlers(t *testing.T) {
 	}
 	// Disable logging
 	logrus.SetOutput(ioutil.Discard)
+	ln := fasthttputil.NewInmemoryListener()
+	defer ln.Close()
+	srv := NewServer(nil)
+	go fasthttp.Serve(ln, srv.handler())
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			var body io.Reader
-			if tc.request != "" {
-				body = strings.NewReader(tc.request)
-			}
-			req, err := http.NewRequest("GET", "/test/request"+tc.query, body)
-			if err != nil {
-				t.Fatalf("could not create request: %v", err)
-			}
-			rec := httptest.NewRecorder()
-			var params httprouter.Params
-			if tc.entityID != "" {
-				params = httprouter.Params{
-					httprouter.Param{Key: "id", Value: tc.entityID},
-				}
-			}
-
 			// new store for each test
 			store := new(MockStore)
 			srv.store = store
@@ -928,68 +849,39 @@ func TestHandlers(t *testing.T) {
 				}
 			}
 
-			tc.handler(rec, req, params)
+			req := fasthttp.AcquireRequest()
+			req.SetRequestURI("http://localhost" + tc.path + tc.query)
+			if tc.request != "" {
+				req.Header.SetMethod("POST")
+				req.SetBodyString(tc.request)
+			}
 
-			res := rec.Result()
-			defer res.Body.Close()
+			res := fasthttp.AcquireResponse()
+			client := fasthttp.Client{
+				Dial: func(_ string) (net.Conn, error) { return ln.Dial() },
+			}
 
-			buf, err := ioutil.ReadAll(res.Body)
-			if err != nil {
-				t.Fatalf("could not read response: %v", err)
+			if err := client.Do(req, res); err != nil {
+				t.Fatalf("could not send request: %v", err)
 			}
 
 			statusCode := tc.statusCode
 			if statusCode == 0 {
-				statusCode = http.StatusOK
+				statusCode = fasthttp.StatusOK
 			}
 
-			assert.Equal(t, statusCode, res.StatusCode, "invalid status code")
-			assert.Equal(t, tc.response, string(buf), "invalid response body")
+			assert.Equal(t, statusCode, res.StatusCode(), "invalid status code")
+			assert.Equal(t, tc.response, string(res.Body()), "invalid response body")
 			if len(tc.response) > 0 {
 				assert.Equal(t,
 					"application/json; charset=utf-8",
-					res.Header.Get("Content-Type"),
+					string(res.Header.Peek("Content-Type")),
 					"invalid content type header")
 			}
 			store.AssertExpectations(t)
+
+			fasthttp.ReleaseResponse(res)
+			fasthttp.ReleaseRequest(req)
 		})
 	}
-}
-
-func TestRouting(t *testing.T) {
-	store := new(MockStore)
-	srv := httptest.NewServer(NewServer(store).handler())
-	defer srv.Close()
-
-	store.On("GetUser", 1, mock.AnythingOfType("*main.User")).Return(nil).Run(func(args mock.Arguments) {
-		user := args.Get(1).(*User)
-		*user = User{
-			ID:        1,
-			FirstName: "First",
-			LastName:  "User",
-			Email:     "foo@bar.com",
-			Gender:    "m",
-			BirthDate: Timestamp{time.Unix(100000, 0)},
-		}
-	})
-
-	res, err := http.Get(fmt.Sprintf("%s/users/1", srv.URL))
-	if err != nil {
-		t.Fatalf("could not send GET request: %v", err)
-	}
-
-	assert.Equal(t, http.StatusOK, res.StatusCode, "invalid status code")
-	assert.Equal(t,
-		"application/json; charset=utf-8",
-		res.Header.Get("Content-Type"),
-		"invalid content type header")
-
-	buf, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		t.Fatalf("could not read response: %v", err)
-	}
-	assert.Equal(t,
-		string(buf),
-		`{"id":1,"first_name":"First","last_name":"User","email":"foo@bar.com","gender":"m","birth_date":100000}`+"\n",
-		"invalid response")
 }
