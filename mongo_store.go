@@ -20,6 +20,12 @@ type MongoStore struct {
 }
 
 func NewMongoStore(s *mgo.Session) (*MongoStore, error) {
+	if err := usersCollection(s).EnsureIndex(mgo.Index{
+		Key:    []string{"e"},
+		Unique: true,
+	}); err != nil {
+		return nil, err
+	}
 	if err := visitsCollection(s).EnsureIndexKey("u", "v"); err != nil {
 		return nil, err
 	}

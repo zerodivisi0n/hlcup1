@@ -97,6 +97,20 @@ func TestHandlers(t *testing.T) {
 			},
 		},
 		{
+			name:       "CreateUser/NonUniqEmail",
+			handler:    srv.updateUser,
+			entityID:   "new",
+			request:    `{"id":1,"first_name":"First","last_name":"User","email":"duplicate@email.com","gender":"m","birth_date":100000}`,
+			statusCode: http.StatusBadRequest,
+			storeMethods: []StoreMethod{
+				{
+					method:     "CreateUser",
+					args:       []interface{}{mock.AnythingOfType("*main.User")},
+					returnArgs: []interface{}{&mgo.LastError{Code: 11000}},
+				},
+			},
+		},
+		{
 			name:     "UpdateUser",
 			handler:  srv.updateUser,
 			entityID: "1",

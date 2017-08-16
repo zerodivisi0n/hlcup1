@@ -315,7 +315,7 @@ func (s *Server) getVisit(w http.ResponseWriter, r *http.Request, ps httprouter.
 func handleDbError(w http.ResponseWriter, err error) {
 	if err == mgo.ErrNotFound {
 		w.WriteHeader(http.StatusNotFound)
-	} else if err == ErrMissingID || err == ErrUpdateID {
+	} else if err == ErrMissingID || err == ErrUpdateID || mgo.IsDup(err) {
 		w.WriteHeader(http.StatusBadRequest)
 	} else {
 		log.Errorf("Database error: %v", err)
