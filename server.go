@@ -16,18 +16,21 @@ import (
 type Store interface {
 	// User methods
 	CreateUser(u *User) error
+	CreateUsers(us []User) error
 	UpdateUser(id int, u *User) error
 	GetUser(id int, u *User) error
 	GetUserVisits(id int, q *UserVisitsQuery, visits *[]UserVisit) error
 
 	// Location methods
 	CreateLocation(l *Location) error
+	CreateLocations(ls []Location) error
 	UpdateLocation(id int, l *Location) error
 	GetLocation(id int, l *Location) error
 	GetLocationAvg(id int, q *LocationAvgQuery) (float64, error)
 
 	// Visit methods
 	CreateVisit(v *Visit) error
+	CreateVisits(vs []Visit) error
 	UpdateVisit(id int, v *Visit) error
 	GetVisit(id int, v *Visit) error
 

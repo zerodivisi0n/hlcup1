@@ -10,6 +10,10 @@ func (m *MockStore) CreateUser(u *User) error {
 	return m.Called(u).Error(0)
 }
 
+func (m *MockStore) CreateUsers(us []User) error {
+	return m.Called(us).Error(0)
+}
+
 func (m *MockStore) UpdateUser(id int, u *User) error {
 	return m.Called(id, u).Error(0)
 }
@@ -24,6 +28,10 @@ func (m *MockStore) GetUserVisits(id int, q *UserVisitsQuery, visits *[]UserVisi
 
 func (m *MockStore) CreateLocation(l *Location) error {
 	return m.Called(l).Error(0)
+}
+
+func (m *MockStore) CreateLocations(ls []Location) error {
+	return m.Called(ls).Error(0)
 }
 
 func (m *MockStore) UpdateLocation(id int, l *Location) error {
@@ -42,6 +50,10 @@ func (m *MockStore) GetLocationAvg(id int, q *LocationAvgQuery) (float64, error)
 
 func (m *MockStore) CreateVisit(v *Visit) error {
 	return m.Called(v).Error(0)
+}
+
+func (m *MockStore) CreateVisits(vs []Visit) error {
+	return m.Called(vs).Error(0)
 }
 
 func (m *MockStore) UpdateVisit(id int, v *Visit) error {

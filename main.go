@@ -86,28 +86,22 @@ func loadData(store Store, filepath string) error {
 
 		if len(data.Users) > 0 {
 			log.Infof("Import %d users", len(data.Users))
-			for _, u := range data.Users {
-				if err := store.CreateUser(&u); err != nil {
-					log.Warnf("Import error %v", err)
-				}
+			if err := store.CreateUsers(data.Users); err != nil {
+				log.Warnf("Import error %v", err)
 			}
 			log.Infof("Done")
 		}
 		if len(data.Visits) > 0 {
 			log.Infof("Import %d visits", len(data.Visits))
-			for _, v := range data.Visits {
-				if err := store.CreateVisit(&v); err != nil {
-					log.Warnf("Import error %v", err)
-				}
+			if err := store.CreateVisits(data.Visits); err != nil {
+				log.Warnf("Import error %v", err)
 			}
 			log.Infof("Done")
 		}
 		if len(data.Locations) > 0 {
 			log.Infof("Import %d locations", len(data.Locations))
-			for _, l := range data.Locations {
-				if err := store.CreateLocation(&l); err != nil {
-					log.Warnf("Import error %v", err)
-				}
+			if err := store.CreateLocations(data.Locations); err != nil {
+				log.Warnf("Import error %v", err)
 			}
 			log.Infof("Done")
 		}

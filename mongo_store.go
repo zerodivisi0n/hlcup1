@@ -45,6 +45,22 @@ func (s *MongoStore) CreateUser(u *User) error {
 	})
 }
 
+func (s *MongoStore) CreateUsers(us []User) error {
+	docs := make([]interface{}, len(us))
+	for i, u := range us {
+		if u.ID == 0 {
+			return ErrMissingID
+		}
+		docs[i] = u
+	}
+	return s.withSession(func(s *mgo.Session) error {
+		bulk := usersCollection(s).Bulk()
+		bulk.Insert(docs...)
+		_, err := bulk.Run()
+		return err
+	})
+}
+
 func (s *MongoStore) UpdateUser(id int, u *User) error {
 	if id != u.ID {
 		return ErrUpdateID
@@ -82,6 +98,22 @@ func (s *MongoStore) CreateLocation(l *Location) error {
 	}
 	return s.withSession(func(s *mgo.Session) error {
 		return locationsCollection(s).Insert(l)
+	})
+}
+
+func (s *MongoStore) CreateLocations(ls []Location) error {
+	docs := make([]interface{}, len(ls))
+	for i, l := range ls {
+		if l.ID == 0 {
+			return ErrMissingID
+		}
+		docs[i] = l
+	}
+	return s.withSession(func(s *mgo.Session) error {
+		bulk := locationsCollection(s).Bulk()
+		bulk.Insert(docs...)
+		_, err := bulk.Run()
+		return err
 	})
 }
 
@@ -133,6 +165,22 @@ func (s *MongoStore) CreateVisit(v *Visit) error {
 	}
 	return s.withSession(func(s *mgo.Session) error {
 		return visitsCollection(s).Insert(v)
+	})
+}
+
+func (s *MongoStore) CreateVisits(vs []Visit) error {
+	docs := make([]interface{}, len(vs))
+	for i, v := range vs {
+		if v.ID == 0 {
+			return ErrMissingID
+		}
+		docs[i] = v
+	}
+	return s.withSession(func(s *mgo.Session) error {
+		bulk := visitsCollection(s).Bulk()
+		bulk.Insert(docs...)
+		_, err := bulk.Run()
+		return err
 	})
 }
 
