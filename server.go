@@ -333,5 +333,6 @@ func handleDbError(w http.ResponseWriter, err error) {
 
 func jsonResponse(w http.ResponseWriter, body interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(body)
 }
