@@ -12,6 +12,8 @@ import (
 	mgo "gopkg.in/mgo.v2"
 )
 
+var emptyResponse = struct{}{}
+
 type Store interface {
 	// User methods
 	CreateUser(u *User) error
@@ -93,7 +95,7 @@ func (s *Server) createUser(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, struct{}{})
+	jsonResponse(ctx, &emptyResponse)
 }
 
 func (s *Server) updateUser(ctx *fasthttp.RequestCtx) {
@@ -125,7 +127,7 @@ func (s *Server) updateUser(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, struct{}{})
+	jsonResponse(ctx, &emptyResponse)
 }
 
 func (s *Server) getUser(ctx *fasthttp.RequestCtx) {
@@ -182,7 +184,7 @@ func (s *Server) createLocation(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, struct{}{})
+	jsonResponse(ctx, &emptyResponse)
 }
 
 func (s *Server) updateLocation(ctx *fasthttp.RequestCtx) {
@@ -214,7 +216,7 @@ func (s *Server) updateLocation(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, struct{}{})
+	jsonResponse(ctx, &emptyResponse)
 }
 
 func (s *Server) getLocation(ctx *fasthttp.RequestCtx) {
@@ -268,7 +270,7 @@ func (s *Server) createVisit(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, struct{}{})
+	jsonResponse(ctx, &emptyResponse)
 }
 
 func (s *Server) updateVisit(ctx *fasthttp.RequestCtx) {
@@ -300,7 +302,7 @@ func (s *Server) updateVisit(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, struct{}{})
+	jsonResponse(ctx, &emptyResponse)
 }
 
 func (s *Server) getVisit(ctx *fasthttp.RequestCtx) {
