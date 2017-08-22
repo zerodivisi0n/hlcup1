@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -31,6 +32,7 @@ func main() {
 	if err := loadData(store, datapath); err != nil {
 		log.Fatal(err)
 	}
+	runtime.GC()
 
 	srv := NewServer(store)
 	log.Infof("Start listening on address %s", listenAddr)
