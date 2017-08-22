@@ -72,7 +72,7 @@ func (s *MongoStore) CreateUsers(us []User) error {
 	})
 }
 
-func (s *MongoStore) UpdateUser(id int, u *User) error {
+func (s *MongoStore) UpdateUser(id uint, u *User) error {
 	if id != u.ID {
 		return ErrUpdateID
 	}
@@ -86,13 +86,13 @@ func (s *MongoStore) UpdateUser(id int, u *User) error {
 	})
 }
 
-func (s *MongoStore) GetUser(id int, u *User) error {
+func (s *MongoStore) GetUser(id uint, u *User) error {
 	return s.withSession(func(s *mgo.Session) error {
 		return usersCollection(s).FindId(id).One(u)
 	})
 }
 
-func (s *MongoStore) GetUserVisits(id int, q *UserVisitsQuery, visits *[]UserVisit) error {
+func (s *MongoStore) GetUserVisits(id uint, q *UserVisitsQuery, visits *[]UserVisit) error {
 	return s.withSession(func(s *mgo.Session) error {
 		// Check users exists
 		c, err := usersCollection(s).FindId(id).Count()
@@ -143,7 +143,7 @@ func (s *MongoStore) CreateLocations(ls []Location) error {
 	})
 }
 
-func (s *MongoStore) UpdateLocation(id int, l *Location) error {
+func (s *MongoStore) UpdateLocation(id uint, l *Location) error {
 	if id != l.ID {
 		return ErrUpdateID
 	}
@@ -157,13 +157,13 @@ func (s *MongoStore) UpdateLocation(id int, l *Location) error {
 	})
 }
 
-func (s *MongoStore) GetLocation(id int, l *Location) error {
+func (s *MongoStore) GetLocation(id uint, l *Location) error {
 	return s.withSession(func(s *mgo.Session) error {
 		return locationsCollection(s).FindId(id).One(l)
 	})
 }
 
-func (s *MongoStore) GetLocationAvg(id int, q *LocationAvgQuery) (float64, error) {
+func (s *MongoStore) GetLocationAvg(id uint, q *LocationAvgQuery) (float64, error) {
 	var avg float64
 	if err := s.withSession(func(s *mgo.Session) error {
 		// Check location exists
@@ -225,7 +225,7 @@ func (s *MongoStore) CreateVisits(vs []Visit) error {
 	})
 }
 
-func (s *MongoStore) UpdateVisit(id int, v *Visit) error {
+func (s *MongoStore) UpdateVisit(id uint, v *Visit) error {
 	if id != v.ID {
 		return ErrUpdateID
 	}
@@ -239,7 +239,7 @@ func (s *MongoStore) UpdateVisit(id int, v *Visit) error {
 	})
 }
 
-func (s *MongoStore) GetVisit(id int, v *Visit) error {
+func (s *MongoStore) GetVisit(id uint, v *Visit) error {
 	return s.withSession(func(s *mgo.Session) error {
 		return visitsCollection(s).FindId(id).One(v)
 	})
@@ -279,7 +279,7 @@ func visitsCollection(s *mgo.Session) *mgo.Collection {
 	return s.DB("").C("visits")
 }
 
-func userVisitsPipeline(id int, q *UserVisitsQuery) []bson.M {
+func userVisitsPipeline(id uint, q *UserVisitsQuery) []bson.M {
 	matchStage := bson.M{"u": id}
 	if tr := timeRangeQuery(q.FromDate.Time, q.ToDate.Time); tr != nil {
 		matchStage["v"] = tr
@@ -303,7 +303,7 @@ func userVisitsPipeline(id int, q *UserVisitsQuery) []bson.M {
 	}
 }
 
-func locationAvgPipeline(id int, q *LocationAvgQuery) []bson.M {
+func locationAvgPipeline(id uint, q *LocationAvgQuery) []bson.M {
 	matchStage := bson.M{"l": id}
 	if tr := timeRangeQuery(q.FromDate.Time, q.ToDate.Time); tr != nil {
 		matchStage["v"] = tr

@@ -17,22 +17,22 @@ type Store interface {
 	// User methods
 	CreateUser(u *User) error
 	CreateUsers(us []User) error
-	UpdateUser(id int, u *User) error
-	GetUser(id int, u *User) error
-	GetUserVisits(id int, q *UserVisitsQuery, visits *[]UserVisit) error
+	UpdateUser(id uint, u *User) error
+	GetUser(id uint, u *User) error
+	GetUserVisits(id uint, q *UserVisitsQuery, visits *[]UserVisit) error
 
 	// Location methods
 	CreateLocation(l *Location) error
 	CreateLocations(ls []Location) error
-	UpdateLocation(id int, l *Location) error
-	GetLocation(id int, l *Location) error
-	GetLocationAvg(id int, q *LocationAvgQuery) (float64, error)
+	UpdateLocation(id uint, l *Location) error
+	GetLocation(id uint, l *Location) error
+	GetLocationAvg(id uint, q *LocationAvgQuery) (float64, error)
 
 	// Visit methods
 	CreateVisit(v *Visit) error
 	CreateVisits(vs []Visit) error
-	UpdateVisit(id int, v *Visit) error
-	GetVisit(id int, v *Visit) error
+	UpdateVisit(id uint, v *Visit) error
+	GetVisit(id uint, v *Visit) error
 
 	// Clear the entire databasec
 	Clear() error
@@ -99,14 +99,14 @@ func (s *Server) updateUser(ctx *fasthttp.RequestCtx) {
 		return
 	}
 	ctx.SetConnectionClose()
-	id, err := strconv.Atoi(ctx.UserValue("id").(string))
+	id, err := strconv.ParseUint(ctx.UserValue("id").(string), 10, 0)
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
 	}
 	var user User
 	// check user exists first
-	if err := s.store.GetUser(id, &user); err != nil {
+	if err := s.store.GetUser(uint(id), &user); err != nil {
 		handleDbError(ctx, err)
 		return
 	}
@@ -118,7 +118,7 @@ func (s *Server) updateUser(ctx *fasthttp.RequestCtx) {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
-	if err := s.store.UpdateUser(id, &user); err != nil {
+	if err := s.store.UpdateUser(uint(id), &user); err != nil {
 		handleDbError(ctx, err)
 		return
 	}
@@ -126,13 +126,13 @@ func (s *Server) updateUser(ctx *fasthttp.RequestCtx) {
 }
 
 func (s *Server) getUser(ctx *fasthttp.RequestCtx) {
-	id, err := strconv.Atoi(ctx.UserValue("id").(string))
+	id, err := strconv.ParseUint(ctx.UserValue("id").(string), 10, 0)
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
 	}
 	var user User
-	if err := s.store.GetUser(id, &user); err != nil {
+	if err := s.store.GetUser(uint(id), &user); err != nil {
 		handleDbError(ctx, err)
 		return
 	}
@@ -140,7 +140,7 @@ func (s *Server) getUser(ctx *fasthttp.RequestCtx) {
 }
 
 func (s *Server) getUserVisits(ctx *fasthttp.RequestCtx) {
-	id, err := strconv.Atoi(ctx.UserValue("id").(string))
+	id, err := strconv.ParseUint(ctx.UserValue("id").(string), 10, 0)
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
@@ -151,7 +151,7 @@ func (s *Server) getUserVisits(ctx *fasthttp.RequestCtx) {
 		return
 	}
 	var visits []UserVisit
-	if err := s.store.GetUserVisits(id, &query, &visits); err != nil {
+	if err := s.store.GetUserVisits(uint(id), &query, &visits); err != nil {
 		handleDbError(ctx, err)
 		return
 	}
@@ -188,14 +188,14 @@ func (s *Server) updateLocation(ctx *fasthttp.RequestCtx) {
 		return
 	}
 	ctx.SetConnectionClose()
-	id, err := strconv.Atoi(ctx.UserValue("id").(string))
+	id, err := strconv.ParseUint(ctx.UserValue("id").(string), 10, 0)
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
 	}
 	var location Location
 	// check location exists first
-	if err := s.store.GetLocation(id, &location); err != nil {
+	if err := s.store.GetLocation(uint(id), &location); err != nil {
 		handleDbError(ctx, err)
 		return
 	}
@@ -207,7 +207,7 @@ func (s *Server) updateLocation(ctx *fasthttp.RequestCtx) {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
-	if err := s.store.UpdateLocation(id, &location); err != nil {
+	if err := s.store.UpdateLocation(uint(id), &location); err != nil {
 		handleDbError(ctx, err)
 		return
 	}
@@ -215,13 +215,13 @@ func (s *Server) updateLocation(ctx *fasthttp.RequestCtx) {
 }
 
 func (s *Server) getLocation(ctx *fasthttp.RequestCtx) {
-	id, err := strconv.Atoi(ctx.UserValue("id").(string))
+	id, err := strconv.ParseUint(ctx.UserValue("id").(string), 10, 0)
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
 	}
 	var location Location
-	if err := s.store.GetLocation(id, &location); err != nil {
+	if err := s.store.GetLocation(uint(id), &location); err != nil {
 		handleDbError(ctx, err)
 		return
 	}
@@ -229,7 +229,7 @@ func (s *Server) getLocation(ctx *fasthttp.RequestCtx) {
 }
 
 func (s *Server) getLocationAvg(ctx *fasthttp.RequestCtx) {
-	id, err := strconv.Atoi(ctx.UserValue("id").(string))
+	id, err := strconv.ParseUint(ctx.UserValue("id").(string), 10, 0)
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
@@ -239,7 +239,7 @@ func (s *Server) getLocationAvg(ctx *fasthttp.RequestCtx) {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
-	avg, err := s.store.GetLocationAvg(id, &query)
+	avg, err := s.store.GetLocationAvg(uint(id), &query)
 	if err != nil {
 		handleDbError(ctx, err)
 		return
@@ -276,14 +276,14 @@ func (s *Server) updateVisit(ctx *fasthttp.RequestCtx) {
 		return
 	}
 	ctx.SetConnectionClose()
-	id, err := strconv.Atoi(ctx.UserValue("id").(string))
+	id, err := strconv.ParseUint(ctx.UserValue("id").(string), 10, 0)
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
 	}
 	var visit Visit
 	// check location exists first
-	if err := s.store.GetVisit(id, &visit); err != nil {
+	if err := s.store.GetVisit(uint(id), &visit); err != nil {
 		handleDbError(ctx, err)
 		return
 	}
@@ -295,7 +295,7 @@ func (s *Server) updateVisit(ctx *fasthttp.RequestCtx) {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
-	if err := s.store.UpdateVisit(id, &visit); err != nil {
+	if err := s.store.UpdateVisit(uint(id), &visit); err != nil {
 		handleDbError(ctx, err)
 		return
 	}
@@ -303,13 +303,13 @@ func (s *Server) updateVisit(ctx *fasthttp.RequestCtx) {
 }
 
 func (s *Server) getVisit(ctx *fasthttp.RequestCtx) {
-	id, err := strconv.Atoi(ctx.UserValue("id").(string))
+	id, err := strconv.ParseUint(ctx.UserValue("id").(string), 10, 0)
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
 	}
 	var visit Visit
-	if err := s.store.GetVisit(id, &visit); err != nil {
+	if err := s.store.GetVisit(uint(id), &visit); err != nil {
 		handleDbError(ctx, err)
 		return
 	}

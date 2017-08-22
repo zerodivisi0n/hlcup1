@@ -13,7 +13,7 @@ import (
 )
 
 type User struct {
-	ID        int       `json:"id" bson:"_id"`
+	ID        uint      `json:"id" bson:"_id"`
 	FirstName string    `json:"first_name" bson:"f"`
 	LastName  string    `json:"last_name" bson:"l"`
 	Email     string    `json:"email" bson:"e"`
@@ -23,7 +23,7 @@ type User struct {
 }
 
 type Location struct {
-	ID       int    `json:"id" bson:"_id"`
+	ID       uint   `json:"id" bson:"_id"`
 	City     string `json:"city" bson:"ci"`
 	Country  string `json:"country" bson:"co"`
 	Place    string `json:"place" bson:"p"`
@@ -32,9 +32,9 @@ type Location struct {
 }
 
 type Visit struct {
-	ID         int       `json:"id" bson:"_id"`
-	UserID     int       `json:"user" bson:"u"`
-	LocationID int       `json:"location" bson:"l"`
+	ID         uint      `json:"id" bson:"_id"`
+	UserID     uint      `json:"user" bson:"u"`
+	LocationID uint      `json:"location" bson:"l"`
 	VisitedAt  Timestamp `json:"visited_at" bson:"v"`
 	Mark       int       `json:"mark" bson:"m"`
 	JSON       []byte    `json:"-" bson:"j"`
@@ -123,7 +123,7 @@ func (u *User) UnmarshalJSON(b []byte) error {
 		}
 		if bytes.Equal(key, []byte("id")) {
 			if id, err := jsonparser.ParseInt(value); err == nil {
-				u.ID = int(id)
+				u.ID = uint(id)
 			} else {
 				return fmt.Errorf("invalid id: %v", err)
 			}
@@ -169,7 +169,7 @@ func (l *Location) UnmarshalJSON(b []byte) error {
 		}
 		if bytes.Equal(key, []byte("id")) {
 			if id, err := jsonparser.ParseInt(value); err == nil {
-				l.ID = int(id)
+				l.ID = uint(id)
 			} else {
 				return fmt.Errorf("invalid id: %v", err)
 			}
@@ -209,19 +209,19 @@ func (v *Visit) UnmarshalJSON(b []byte) error {
 		}
 		if bytes.Equal(key, []byte("id")) {
 			if id, err := jsonparser.ParseInt(value); err == nil {
-				v.ID = int(id)
+				v.ID = uint(id)
 			} else {
 				return fmt.Errorf("invalid id: %v", err)
 			}
 		} else if bytes.Equal(key, []byte("user")) {
 			if id, err := jsonparser.ParseInt(value); err == nil {
-				v.UserID = int(id)
+				v.UserID = uint(id)
 			} else {
 				return fmt.Errorf("invalid user id: %v", err)
 			}
 		} else if bytes.Equal(key, []byte("location")) {
 			if id, err := jsonparser.ParseInt(value); err == nil {
-				v.LocationID = int(id)
+				v.LocationID = uint(id)
 			} else {
 				return fmt.Errorf("invalid location id: %v", err)
 			}
