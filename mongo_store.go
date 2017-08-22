@@ -281,7 +281,7 @@ func visitsCollection(s *mgo.Session) *mgo.Collection {
 
 func userVisitsPipeline(id uint, q *UserVisitsQuery) []bson.M {
 	matchStage := bson.M{"u": id}
-	if tr := timeRangeQuery(q.FromDate.Time, q.ToDate.Time); tr != nil {
+	if tr := timeRangeQuery(q.FromDate, q.ToDate); tr != nil {
 		matchStage["v"] = tr
 	}
 
@@ -305,7 +305,7 @@ func userVisitsPipeline(id uint, q *UserVisitsQuery) []bson.M {
 
 func locationAvgPipeline(id uint, q *LocationAvgQuery) []bson.M {
 	matchStage := bson.M{"l": id}
-	if tr := timeRangeQuery(q.FromDate.Time, q.ToDate.Time); tr != nil {
+	if tr := timeRangeQuery(q.FromDate, q.ToDate); tr != nil {
 		matchStage["v"] = tr
 	}
 
@@ -319,12 +319,12 @@ func locationAvgPipeline(id uint, q *LocationAvgQuery) []bson.M {
 
 	// add lookup stage
 	filterStage := bson.M{}
-	var fromBirth, toBirth time.Time
+	var fromBirth, toBirth Timestamp
 	if q.FromAge > 0 {
-		toBirth = time.Now().AddDate(-q.FromAge, 0, 0)
+		toBirth.SetUnix(time.Now().AddDate(-q.FromAge, 0, 0).Unix())
 	}
 	if q.ToAge > 0 {
-		fromBirth = time.Now().AddDate(-q.ToAge, 0, 0)
+		fromBirth.SetUnix(time.Now().AddDate(-q.ToAge, 0, 0).Unix())
 	}
 
 	if tr := timeRangeQuery(fromBirth, toBirth); tr != nil {
@@ -343,11 +343,11 @@ func locationAvgPipeline(id uint, q *LocationAvgQuery) []bson.M {
 	}
 }
 
-func timeRangeQuery(from, to time.Time) bson.M {
+func timeRangeQuery(from, to Timestamp) bson.M {
 	if !from.IsZero() && !to.IsZero() {
 		return bson.M{
-			"$gt": from,
-			"$lt": to,
+			"$gt": int64(from),
+			"$lt": int64(to),
 		}
 	} else if !from.IsZero() {
 		return bson.M{"$gt": from}

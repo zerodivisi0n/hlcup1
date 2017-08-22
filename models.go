@@ -61,13 +61,10 @@ type LocationAvgQuery struct {
 	Gender   string
 }
 
-type Timestamp struct {
-	time.Time
-}
+type Timestamp int64
 
 func (t Timestamp) MarshalJSON() ([]byte, error) {
-	ts := t.Time.Unix()
-	stamp := fmt.Sprint(ts)
+	stamp := fmt.Sprint(int64(t))
 
 	return []byte(stamp), nil
 }
@@ -84,21 +81,21 @@ func (t *Timestamp) UnmarshalJSON(b []byte) error {
 }
 
 func (t Timestamp) GetBSON() (interface{}, error) {
-	if time.Time(t.Time).IsZero() {
+	if t.IsZero() {
 		return nil, nil
 	}
 
-	return time.Time(t.Time), nil
+	return int64(t), nil
 }
 
 func (t *Timestamp) SetBSON(raw bson.Raw) error {
-	var tm time.Time
+	var tm int64
 
 	if err := raw.Unmarshal(&tm); err != nil {
 		return err
 	}
 
-	*t = Timestamp{tm}
+	*t = Timestamp(tm)
 
 	return nil
 }
@@ -107,12 +104,16 @@ func (t *Timestamp) UnmarshalText(text []byte) error {
 	return t.UnmarshalJSON(text)
 }
 
-func (t *Timestamp) String() string {
-	return time.Time(t.Time).String()
+func (t Timestamp) String() string {
+	return time.Unix(int64(t), 0).String()
 }
 
 func (t *Timestamp) SetUnix(ts int64) {
-	t.Time = time.Unix(ts, 0)
+	*t = Timestamp(ts)
+}
+
+func (t Timestamp) IsZero() bool {
+	return int64(t) == 0
 }
 
 // Custom unmarshalers
@@ -249,7 +250,7 @@ func (u User) Validate() bool {
 		len(u.FirstName) > 0 && len(u.LastName) < 50 &&
 		len(u.LastName) > 0 && len(u.LastName) < 50 &&
 		(u.Gender == "m" || u.Gender == "f") &&
-		!u.BirthDate.Time.IsZero()
+		!u.BirthDate.IsZero()
 }
 
 func (l Location) Validate() bool {
@@ -264,6 +265,6 @@ func (v Visit) Validate() bool {
 	return v.ID > 0 &&
 		v.LocationID > 0 &&
 		v.UserID > 0 &&
-		!v.VisitedAt.Time.IsZero() &&
+		!v.VisitedAt.IsZero() &&
 		v.Mark >= 0 && v.Mark <= 5
 }
