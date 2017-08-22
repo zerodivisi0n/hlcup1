@@ -83,7 +83,7 @@ func (s *Server) handler() fasthttp.RequestHandler {
 func (s *Server) createUser(ctx *fasthttp.RequestCtx) {
 	var user User
 	ctx.SetConnectionClose()
-	if err := json.Unmarshal(ctx.PostBody(), &user); err != nil {
+	if err := user.UnmarshalJSON(ctx.PostBody()); err != nil {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
@@ -115,7 +115,7 @@ func (s *Server) updateUser(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	if err := json.Unmarshal(ctx.PostBody(), &user); err != nil {
+	if err := user.UnmarshalJSON(ctx.PostBody()); err != nil {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
@@ -172,7 +172,7 @@ func (s *Server) getUserVisits(ctx *fasthttp.RequestCtx) {
 func (s *Server) createLocation(ctx *fasthttp.RequestCtx) {
 	var location Location
 	ctx.SetConnectionClose()
-	if err := json.Unmarshal(ctx.PostBody(), &location); err != nil {
+	if err := location.UnmarshalJSON(ctx.PostBody()); err != nil {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
@@ -204,7 +204,7 @@ func (s *Server) updateLocation(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	if err := json.Unmarshal(ctx.PostBody(), &location); err != nil {
+	if err := location.UnmarshalJSON(ctx.PostBody()); err != nil {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
@@ -258,7 +258,7 @@ func (s *Server) getLocationAvg(ctx *fasthttp.RequestCtx) {
 func (s *Server) createVisit(ctx *fasthttp.RequestCtx) {
 	var visit Visit
 	ctx.SetConnectionClose()
-	if err := json.Unmarshal(ctx.PostBody(), &visit); err != nil {
+	if err := visit.UnmarshalJSON(ctx.PostBody()); err != nil {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
@@ -290,7 +290,7 @@ func (s *Server) updateVisit(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	if err := json.Unmarshal(ctx.PostBody(), &visit); err != nil {
+	if err := visit.UnmarshalJSON(ctx.PostBody()); err != nil {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}

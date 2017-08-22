@@ -1,11 +1,14 @@
 package main
 
 import (
-	"encoding/json"
+	"bytes"
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
 	"time"
+
+	"github.com/buger/jsonparser"
 
 	"gopkg.in/mgo.v2/bson"
 )
@@ -121,108 +124,127 @@ func ValidateTimestamp(field reflect.Value) interface{} {
 
 // Custom unmarshalers
 func (u *User) UnmarshalJSON(b []byte) error {
-	kv := map[string]interface{}{}
-	if err := json.Unmarshal(b, &kv); err != nil {
-		return err
-	}
-	for k, v := range kv {
-		var ok bool
-		switch k {
-		case "id":
-			var id float64
-			if id, ok = v.(float64); ok {
+	return jsonparser.ObjectEach(b, func(key []byte, value []byte, vt jsonparser.ValueType, offset int) error {
+		if vt == jsonparser.Null {
+			return errors.New("null type")
+		}
+		if bytes.Equal(key, []byte("id")) {
+			if id, err := jsonparser.ParseInt(value); err == nil {
 				u.ID = int(id)
+			} else {
+				return fmt.Errorf("invalid id: %v", err)
 			}
-		case "first_name":
-			u.FirstName, ok = v.(string)
-		case "last_name":
-			u.LastName, ok = v.(string)
-		case "email":
-			u.Email, ok = v.(string)
-		case "gender":
-			u.Gender, ok = v.(string)
-		case "birth_date":
-			var ts float64
-			if ts, ok = v.(float64); ok {
-				u.BirthDate.SetUnix(int64(ts))
+		} else if bytes.Equal(key, []byte("first_name")) {
+			if s, err := jsonparser.ParseString(value); err == nil {
+				u.FirstName = s
+			} else {
+				return fmt.Errorf("invalid first name: %v", err)
+			}
+		} else if bytes.Equal(key, []byte("last_name")) {
+			if s, err := jsonparser.ParseString(value); err == nil {
+				u.LastName = s
+			} else {
+				return fmt.Errorf("invalid last name: %v", err)
+			}
+		} else if bytes.Equal(key, []byte("email")) {
+			if s, err := jsonparser.ParseString(value); err == nil {
+				u.Email = s
+			} else {
+				return fmt.Errorf("invalid email: %v", err)
+			}
+		} else if bytes.Equal(key, []byte("gender")) {
+			if s, err := jsonparser.ParseString(value); err == nil {
+				u.Gender = s
+			} else {
+				return fmt.Errorf("invalid gender: %v", err)
+			}
+		} else if bytes.Equal(key, []byte("birth_date")) {
+			if ts, err := jsonparser.ParseInt(value); err == nil {
+				u.BirthDate.SetUnix(ts)
+			} else {
+				return errors.New("invalid birth date")
 			}
 		}
-		if !ok {
-			return fmt.Errorf("Invalid type %T for key '%s'", v, k)
-		}
-	}
-	return nil
+		return nil
+	})
 }
 
 func (l *Location) UnmarshalJSON(b []byte) error {
-	kv := map[string]interface{}{}
-	if err := json.Unmarshal(b, &kv); err != nil {
-		return err
-	}
-	for k, v := range kv {
-		var ok bool
-		switch k {
-		case "id":
-			var id float64
-			if id, ok = v.(float64); ok {
+	return jsonparser.ObjectEach(b, func(key []byte, value []byte, vt jsonparser.ValueType, offset int) error {
+		if vt == jsonparser.Null {
+			return errors.New("null type")
+		}
+		if bytes.Equal(key, []byte("id")) {
+			if id, err := jsonparser.ParseInt(value); err == nil {
 				l.ID = int(id)
+			} else {
+				return fmt.Errorf("invalid id: %v", err)
 			}
-		case "city":
-			l.City, ok = v.(string)
-		case "country":
-			l.Country, ok = v.(string)
-		case "place":
-			l.Place, ok = v.(string)
-		case "distance":
-			var d float64
-			if d, ok = v.(float64); ok {
-				l.Distance = int(d)
+		} else if bytes.Equal(key, []byte("city")) {
+			if s, err := jsonparser.ParseString(value); err == nil {
+				l.City = s
+			} else {
+				return fmt.Errorf("invalid city: %v", err)
+			}
+		} else if bytes.Equal(key, []byte("country")) {
+			if s, err := jsonparser.ParseString(value); err == nil {
+				l.Country = s
+			} else {
+				return fmt.Errorf("invalid country: %v", err)
+			}
+		} else if bytes.Equal(key, []byte("place")) {
+			if s, err := jsonparser.ParseString(value); err == nil {
+				l.Place = s
+			} else {
+				return fmt.Errorf("invalid place: %v", err)
+			}
+		} else if bytes.Equal(key, []byte("distance")) {
+			if id, err := jsonparser.ParseInt(value); err == nil {
+				l.Distance = int(id)
+			} else {
+				return fmt.Errorf("invalid distance: %v", err)
 			}
 		}
-		if !ok {
-			return fmt.Errorf("Invalid type %T for key '%s'", v, k)
-		}
-	}
-	return nil
+		return nil
+	})
 }
 
-func (vi *Visit) UnmarshalJSON(b []byte) error {
-	kv := map[string]interface{}{}
-	if err := json.Unmarshal(b, &kv); err != nil {
-		return err
-	}
-	for k, v := range kv {
-		var ok bool
-		switch k {
-		case "id":
-			var id float64
-			if id, ok = v.(float64); ok {
-				vi.ID = int(id)
+func (v *Visit) UnmarshalJSON(b []byte) error {
+	return jsonparser.ObjectEach(b, func(key []byte, value []byte, vt jsonparser.ValueType, offset int) error {
+		if vt == jsonparser.Null {
+			return errors.New("null type")
+		}
+		if bytes.Equal(key, []byte("id")) {
+			if id, err := jsonparser.ParseInt(value); err == nil {
+				v.ID = int(id)
+			} else {
+				return fmt.Errorf("invalid id: %v", err)
 			}
-		case "user":
-			var id float64
-			if id, ok = v.(float64); ok {
-				vi.UserID = int(id)
+		} else if bytes.Equal(key, []byte("user")) {
+			if id, err := jsonparser.ParseInt(value); err == nil {
+				v.UserID = int(id)
+			} else {
+				return fmt.Errorf("invalid user id: %v", err)
 			}
-		case "location":
-			var id float64
-			if id, ok = v.(float64); ok {
-				vi.LocationID = int(id)
+		} else if bytes.Equal(key, []byte("location")) {
+			if id, err := jsonparser.ParseInt(value); err == nil {
+				v.LocationID = int(id)
+			} else {
+				return fmt.Errorf("invalid location id: %v", err)
 			}
-		case "visited_at":
-			var ts float64
-			if ts, ok = v.(float64); ok {
-				vi.VisitedAt.SetUnix(int64(ts))
+		} else if bytes.Equal(key, []byte("visited_at")) {
+			if ts, err := jsonparser.ParseInt(value); err == nil {
+				v.VisitedAt.SetUnix(ts)
+			} else {
+				return fmt.Errorf("invalid visited_at: %v", err)
 			}
-		case "mark":
-			var mark float64
-			if mark, ok = v.(float64); ok {
-				vi.Mark = int(mark)
+		} else if bytes.Equal(key, []byte("mark")) {
+			if mark, err := jsonparser.ParseInt(value); err == nil {
+				v.Mark = int(mark)
+			} else {
+				return fmt.Errorf("invalid mark: %v", err)
 			}
 		}
-		if !ok {
-			return fmt.Errorf("Invalid type %T for key '%s'", v, k)
-		}
-	}
-	return nil
+		return nil
+	})
 }
