@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"time"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -319,15 +318,7 @@ func locationAvgPipeline(id uint, q *LocationAvgQuery) []bson.M {
 
 	// add lookup stage
 	filterStage := bson.M{}
-	var fromBirth, toBirth Timestamp
-	if q.FromAge > 0 {
-		toBirth.SetUnix(time.Now().AddDate(-q.FromAge, 0, 0).Unix())
-	}
-	if q.ToAge > 0 {
-		fromBirth.SetUnix(time.Now().AddDate(-q.ToAge, 0, 0).Unix())
-	}
-
-	if tr := timeRangeQuery(fromBirth, toBirth); tr != nil {
+	if tr := timeRangeQuery(q.FromBirth(), q.ToBirth()); tr != nil {
 		filterStage["user.b"] = tr
 	}
 	if q.Gender != "" {

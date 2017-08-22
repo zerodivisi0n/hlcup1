@@ -2,11 +2,13 @@ package main
 
 import (
 	"archive/zip"
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,6 +18,7 @@ import (
 )
 
 const datapath = "/tmp/data/data.zip"
+const optionspath = "/tmp/data/options.txt"
 const listenAddr = ":80"
 const mongodbURL = "mongodb://localhost/travels"
 
@@ -29,12 +32,14 @@ func main() {
 		log.Fatal(err)
 	}
 
+	datats := getDataTs(optionspath)
+	log.Infof("Data timestamp: %v", datats)
 	if err := loadData(store, datapath); err != nil {
 		log.Fatal(err)
 	}
 	runtime.GC()
 
-	srv := NewServer(store)
+	srv := NewServer(store, datats)
 	log.Infof("Start listening on address %s", listenAddr)
 	log.Fatal(srv.Listen(listenAddr))
 }
@@ -112,4 +117,27 @@ func loadData(store Store, filepath string) error {
 	log.Infof("Done in %v", time.Now().Sub(start))
 
 	return nil
+}
+
+func getDataTs(filepath string) time.Time {
+	file, err := os.Open(filepath)
+	if err != nil {
+		log.Errorf("Failed to open options file: %v", err)
+		return time.Now()
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	if scanner.Scan() {
+		ts, err := strconv.Atoi(scanner.Text())
+		if err != nil {
+			log.Errorf("Invalid timestamp '%s': %v", scanner.Text(), err)
+			return time.Now()
+		}
+		return time.Unix(int64(ts), 0)
+	}
+	if err := scanner.Err(); err != nil {
+		log.Errorf("Failed to read options file: %v", err)
+	}
+	return time.Now()
 }

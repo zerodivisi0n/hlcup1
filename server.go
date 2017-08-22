@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math"
 	"strconv"
+	"time"
 
 	"github.com/buaazp/fasthttprouter"
 	log "github.com/sirupsen/logrus"
@@ -39,12 +40,14 @@ type Store interface {
 }
 
 type Server struct {
-	store Store
+	store  Store
+	datats time.Time
 }
 
-func NewServer(store Store) *Server {
+func NewServer(store Store, datats time.Time) *Server {
 	return &Server{
-		store: store,
+		store:  store,
+		datats: datats,
 	}
 }
 
@@ -234,7 +237,7 @@ func (s *Server) getLocationAvg(ctx *fasthttp.RequestCtx) {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
 	}
-	var query LocationAvgQuery
+	query := LocationAvgQuery{DataTs: s.datats}
 	if !parseLocationAvgQuery(ctx.QueryArgs(), &query) {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return

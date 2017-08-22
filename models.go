@@ -59,6 +59,21 @@ type LocationAvgQuery struct {
 	FromAge  int
 	ToAge    int
 	Gender   string
+	DataTs   time.Time
+}
+
+func (q LocationAvgQuery) FromBirth() Timestamp {
+	if q.ToAge <= 0 {
+		return Timestamp(0)
+	}
+	return Timestamp(q.DataTs.AddDate(-q.ToAge, 0, 0).Unix())
+}
+
+func (q LocationAvgQuery) ToBirth() Timestamp {
+	if q.FromAge <= 0 {
+		return Timestamp(0)
+	}
+	return Timestamp(q.DataTs.AddDate(-q.FromAge, 0, 0).Unix())
 }
 
 type Timestamp int64
