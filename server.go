@@ -8,7 +8,6 @@ import (
 	"github.com/buaazp/fasthttprouter"
 	log "github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
-	validator "gopkg.in/go-playground/validator.v9"
 	mgo "gopkg.in/mgo.v2"
 )
 
@@ -40,16 +39,12 @@ type Store interface {
 }
 
 type Server struct {
-	store     Store
-	validator *validator.Validate
+	store Store
 }
 
 func NewServer(store Store) *Server {
-	v := validator.New()
-	v.RegisterCustomTypeFunc(ValidateTimestamp, Timestamp{})
 	return &Server{
-		store:     store,
-		validator: v,
+		store: store,
 	}
 }
 
@@ -87,7 +82,7 @@ func (s *Server) createUser(ctx *fasthttp.RequestCtx) {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
-	if err := s.validator.Struct(&user); err != nil {
+	if !user.Validate() {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
@@ -119,7 +114,7 @@ func (s *Server) updateUser(ctx *fasthttp.RequestCtx) {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
-	if err := s.validator.Struct(user); err != nil {
+	if !user.Validate() {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
@@ -176,7 +171,7 @@ func (s *Server) createLocation(ctx *fasthttp.RequestCtx) {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
-	if err := s.validator.Struct(&location); err != nil {
+	if !location.Validate() {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
@@ -208,7 +203,7 @@ func (s *Server) updateLocation(ctx *fasthttp.RequestCtx) {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
-	if err := s.validator.Struct(&location); err != nil {
+	if !location.Validate() {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
@@ -262,7 +257,7 @@ func (s *Server) createVisit(ctx *fasthttp.RequestCtx) {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
-	if err := s.validator.Struct(&visit); err != nil {
+	if !visit.Validate() {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
@@ -294,7 +289,7 @@ func (s *Server) updateVisit(ctx *fasthttp.RequestCtx) {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
-	if err := s.validator.Struct(&visit); err != nil {
+	if !visit.Validate() {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
