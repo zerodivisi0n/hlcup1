@@ -3,12 +3,11 @@ package main
 import (
 	"encoding/json"
 	"math"
-	"net/http"
 	"strconv"
 
-	"github.com/gorilla/schema"
-	"github.com/julienschmidt/httprouter"
+	"github.com/buaazp/fasthttprouter"
 	log "github.com/sirupsen/logrus"
+	"github.com/valyala/fasthttp"
 	validator "gopkg.in/go-playground/validator.v9"
 	mgo "gopkg.in/mgo.v2"
 )
@@ -39,29 +38,25 @@ type Store interface {
 }
 
 type Server struct {
-	store        Store
-	validator    *validator.Validate
-	queryDecoder *schema.Decoder
+	store     Store
+	validator *validator.Validate
 }
 
 func NewServer(store Store) *Server {
 	v := validator.New()
 	v.RegisterCustomTypeFunc(ValidateTimestamp, Timestamp{})
-	d := schema.NewDecoder()
-	d.IgnoreUnknownKeys(true)
 	return &Server{
-		store:        store,
-		validator:    v,
-		queryDecoder: d,
+		store:     store,
+		validator: v,
 	}
 }
 
 func (s *Server) Listen(addr string) error {
-	return http.ListenAndServe(addr, s.handler())
+	return fasthttp.ListenAndServe(addr, s.handler())
 }
 
-func (s *Server) handler() http.Handler {
-	r := httprouter.New()
+func (s *Server) handler() fasthttp.RequestHandler {
+	r := fasthttprouter.New()
 	// Users
 	// r.POST("/users/new", s.createUser) // conflicts with existing wildcard
 	r.POST("/users/:id", s.updateUser)
@@ -79,261 +74,324 @@ func (s *Server) handler() http.Handler {
 	r.POST("/visits/:id", s.updateVisit)
 	r.GET("/visits/:id", s.getVisit)
 
-	return r
+	return r.Handler
 }
 
 // Users endpoints
-func (s *Server) createUser(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (s *Server) createUser(ctx *fasthttp.RequestCtx) {
 	var user User
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+	ctx.SetConnectionClose()
+	if err := json.Unmarshal(ctx.PostBody(), &user); err != nil {
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
 	if err := s.validator.Struct(&user); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
 	if err := s.store.CreateUser(&user); err != nil {
-		handleDbError(w, err)
+		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(w, struct{}{})
+	jsonResponse(ctx, struct{}{})
 }
 
-func (s *Server) updateUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if ps.ByName("id") == "new" {
-		s.createUser(w, r, ps)
+func (s *Server) updateUser(ctx *fasthttp.RequestCtx) {
+	if ctx.UserValue("id") == "new" {
+		s.createUser(ctx)
 		return
 	}
-	id, err := strconv.Atoi(ps.ByName("id"))
+	ctx.SetConnectionClose()
+	id, err := strconv.Atoi(ctx.UserValue("id").(string))
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
 	}
 	var user User
 	// check user exists first
 	if err := s.store.GetUser(id, &user); err != nil {
-		handleDbError(w, err)
+		handleDbError(ctx, err)
 		return
 	}
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+	if err := json.Unmarshal(ctx.PostBody(), &user); err != nil {
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
 	if err := s.validator.Struct(user); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
 	if err := s.store.UpdateUser(id, &user); err != nil {
-		handleDbError(w, err)
+		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(w, struct{}{})
+	jsonResponse(ctx, struct{}{})
 }
 
-func (s *Server) getUser(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	id, err := strconv.Atoi(ps.ByName("id"))
+func (s *Server) getUser(ctx *fasthttp.RequestCtx) {
+	id, err := strconv.Atoi(ctx.UserValue("id").(string))
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
 	}
 	var user User
 	if err := s.store.GetUser(id, &user); err != nil {
-		handleDbError(w, err)
+		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(w, &user)
+	jsonResponse(ctx, &user)
 }
 
-func (s *Server) getUserVisits(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	id, err := strconv.Atoi(ps.ByName("id"))
+func (s *Server) getUserVisits(ctx *fasthttp.RequestCtx) {
+	id, err := strconv.Atoi(ctx.UserValue("id").(string))
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
 	}
 	var query UserVisitsQuery
-	if err := s.queryDecoder.Decode(&query, r.URL.Query()); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+	if !parseUserVisitsQuery(ctx.QueryArgs(), &query) {
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
 	var visits []UserVisit
 	if err := s.store.GetUserVisits(id, &query, &visits); err != nil {
-		handleDbError(w, err)
+		handleDbError(ctx, err)
 		return
 	}
 	if len(visits) == 0 {
 		visits = make([]UserVisit, 0)
 	}
-	jsonResponse(w, map[string]interface{}{
+	jsonResponse(ctx, map[string]interface{}{
 		"visits": visits,
 	})
 }
 
 // Locations endpoints
-func (s *Server) createLocation(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (s *Server) createLocation(ctx *fasthttp.RequestCtx) {
 	var location Location
-	if err := json.NewDecoder(r.Body).Decode(&location); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+	ctx.SetConnectionClose()
+	if err := json.Unmarshal(ctx.PostBody(), &location); err != nil {
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
 	if err := s.validator.Struct(&location); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
 	if err := s.store.CreateLocation(&location); err != nil {
-		handleDbError(w, err)
+		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(w, struct{}{})
+	jsonResponse(ctx, struct{}{})
 }
 
-func (s *Server) updateLocation(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if ps.ByName("id") == "new" {
-		s.createLocation(w, r, ps)
+func (s *Server) updateLocation(ctx *fasthttp.RequestCtx) {
+	if ctx.UserValue("id") == "new" {
+		s.createLocation(ctx)
 		return
 	}
-	id, err := strconv.Atoi(ps.ByName("id"))
+	ctx.SetConnectionClose()
+	id, err := strconv.Atoi(ctx.UserValue("id").(string))
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
 	}
 	var location Location
 	// check location exists first
 	if err := s.store.GetLocation(id, &location); err != nil {
-		handleDbError(w, err)
+		handleDbError(ctx, err)
 		return
 	}
-	if err := json.NewDecoder(r.Body).Decode(&location); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+	if err := json.Unmarshal(ctx.PostBody(), &location); err != nil {
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
 	if err := s.validator.Struct(&location); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
 	if err := s.store.UpdateLocation(id, &location); err != nil {
-		handleDbError(w, err)
+		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(w, struct{}{})
+	jsonResponse(ctx, struct{}{})
 }
 
-func (s *Server) getLocation(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	id, err := strconv.Atoi(ps.ByName("id"))
+func (s *Server) getLocation(ctx *fasthttp.RequestCtx) {
+	id, err := strconv.Atoi(ctx.UserValue("id").(string))
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
 	}
 	var location Location
 	if err := s.store.GetLocation(id, &location); err != nil {
-		handleDbError(w, err)
+		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(w, &location)
+	jsonResponse(ctx, &location)
 }
 
-func (s *Server) getLocationAvg(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	id, err := strconv.Atoi(ps.ByName("id"))
+func (s *Server) getLocationAvg(ctx *fasthttp.RequestCtx) {
+	id, err := strconv.Atoi(ctx.UserValue("id").(string))
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
 	}
 	var query LocationAvgQuery
-	if err := s.queryDecoder.Decode(&query, r.URL.Query()); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	if err := s.validator.Struct(&query); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+	if !parseLocationAvgQuery(ctx.QueryArgs(), &query) {
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
 	avg, err := s.store.GetLocationAvg(id, &query)
 	if err != nil {
-		handleDbError(w, err)
+		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(w, map[string]interface{}{
+	jsonResponse(ctx, map[string]interface{}{
 		"avg": math.Floor(avg*100000+0.5) / 100000,
 	})
 }
 
 // Visits endpoints
-func (s *Server) createVisit(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (s *Server) createVisit(ctx *fasthttp.RequestCtx) {
 	var visit Visit
-	if err := json.NewDecoder(r.Body).Decode(&visit); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+	ctx.SetConnectionClose()
+	if err := json.Unmarshal(ctx.PostBody(), &visit); err != nil {
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
 	if err := s.validator.Struct(&visit); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
 	if err := s.store.CreateVisit(&visit); err != nil {
-		handleDbError(w, err)
+		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(w, struct{}{})
+	jsonResponse(ctx, struct{}{})
 }
 
-func (s *Server) updateVisit(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if ps.ByName("id") == "new" {
-		s.createVisit(w, r, ps)
+func (s *Server) updateVisit(ctx *fasthttp.RequestCtx) {
+	if ctx.UserValue("id") == "new" {
+		s.createVisit(ctx)
 		return
 	}
-	id, err := strconv.Atoi(ps.ByName("id"))
+	ctx.SetConnectionClose()
+	id, err := strconv.Atoi(ctx.UserValue("id").(string))
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
 	}
 	var visit Visit
 	// check location exists first
 	if err := s.store.GetVisit(id, &visit); err != nil {
-		handleDbError(w, err)
+		handleDbError(ctx, err)
 		return
 	}
-	if err := json.NewDecoder(r.Body).Decode(&visit); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+	if err := json.Unmarshal(ctx.PostBody(), &visit); err != nil {
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
 	if err := s.validator.Struct(&visit); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 		return
 	}
 	if err := s.store.UpdateVisit(id, &visit); err != nil {
-		handleDbError(w, err)
+		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(w, struct{}{})
+	jsonResponse(ctx, struct{}{})
 }
 
-func (s *Server) getVisit(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	id, err := strconv.Atoi(ps.ByName("id"))
+func (s *Server) getVisit(ctx *fasthttp.RequestCtx) {
+	id, err := strconv.Atoi(ctx.UserValue("id").(string))
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
 	}
 	var visit Visit
 	if err := s.store.GetVisit(id, &visit); err != nil {
-		handleDbError(w, err)
+		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(w, &visit)
+	jsonResponse(ctx, &visit)
 }
 
-func handleDbError(w http.ResponseWriter, err error) {
+func handleDbError(ctx *fasthttp.RequestCtx, err error) {
 	if err == mgo.ErrNotFound {
-		w.WriteHeader(http.StatusNotFound)
+		ctx.SetStatusCode(fasthttp.StatusNotFound)
 	} else if err == ErrMissingID || err == ErrUpdateID || mgo.IsDup(err) {
-		w.WriteHeader(http.StatusBadRequest)
+		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 	} else {
 		log.Errorf("Database error: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		ctx.SetStatusCode(fasthttp.StatusInternalServerError)
 	}
 }
 
-func jsonResponse(w http.ResponseWriter, body interface{}) {
-	w.Header().Set("Transfer-Encoding", "identity")
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(body)
+func jsonResponse(ctx *fasthttp.RequestCtx, body interface{}) {
+	ctx.SetContentType("application/json; charset=utf-8")
+	json.NewEncoder(ctx).Encode(body)
+}
+
+func parseUserVisitsQuery(args *fasthttp.Args, q *UserVisitsQuery) bool {
+	if val := args.Peek("fromDate"); len(val) > 0 {
+		ts, err := strconv.Atoi(string(val))
+		if err != nil {
+			return false
+		}
+		q.FromDate.SetUnix(int64(ts))
+	}
+	if val := args.Peek("toDate"); len(val) > 0 {
+		ts, err := strconv.Atoi(string(val))
+		if err != nil {
+			return false
+		}
+		q.ToDate.SetUnix(int64(ts))
+	}
+	q.Country = string(args.Peek("country"))
+	if val := args.Peek("toDistance"); len(val) > 0 {
+		i, err := strconv.Atoi(string(val))
+		if err != nil {
+			return false
+		}
+		q.ToDistance = i
+	}
+
+	return true
+}
+
+func parseLocationAvgQuery(args *fasthttp.Args, q *LocationAvgQuery) bool {
+	if val := args.Peek("fromDate"); len(val) > 0 {
+		ts, err := strconv.Atoi(string(val))
+		if err != nil {
+			return false
+		}
+		q.FromDate.SetUnix(int64(ts))
+	}
+	if val := args.Peek("toDate"); len(val) > 0 {
+		ts, err := strconv.Atoi(string(val))
+		if err != nil {
+			return false
+		}
+		q.ToDate.SetUnix(int64(ts))
+	}
+	if val := args.Peek("fromAge"); len(val) > 0 {
+		i, err := strconv.Atoi(string(val))
+		if err != nil {
+			return false
+		}
+		q.FromAge = i
+	}
+	if val := args.Peek("toAge"); len(val) > 0 {
+		i, err := strconv.Atoi(string(val))
+		if err != nil {
+			return false
+		}
+		q.ToAge = i
+	}
+	q.Gender = string(args.Peek("gender"))
+	if q.Gender != "" && q.Gender != "m" && q.Gender != "f" {
+		return false
+	}
+	return true
 }
