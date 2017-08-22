@@ -319,7 +319,7 @@ func (s *Server) getVisit(ctx *fasthttp.RequestCtx) {
 func handleDbError(ctx *fasthttp.RequestCtx, err error) {
 	if err == mgo.ErrNotFound {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
-	} else if err == ErrMissingID || err == ErrUpdateID || mgo.IsDup(err) {
+	} else if err == ErrMissingID || err == ErrUpdateID || err == ErrDup {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)
 	} else {
 		log.Errorf("Database error: %v", err)

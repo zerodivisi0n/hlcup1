@@ -12,6 +12,7 @@ import (
 var (
 	ErrMissingID = errors.New("missing id")
 	ErrUpdateID  = errors.New("id field cannot be changed")
+	ErrDup       = errors.New("duplicate key error")
 )
 
 type sessionFunc func(s *mgo.Session) error
@@ -264,6 +265,9 @@ func (s *MongoStore) withSession(f sessionFunc) error {
 	session := s.s.Clone() // wrap session
 	err := f(session)
 	session.Close()
+	if mgo.IsDup(err) {
+		err = ErrDup
+	}
 	return err
 }
 
