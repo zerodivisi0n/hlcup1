@@ -19,6 +19,7 @@ type User struct {
 	Email     string    `json:"email" bson:"e"`
 	Gender    string    `json:"gender" bson:"g"`
 	BirthDate Timestamp `json:"birth_date" bson:"b"`
+	JSON      []byte    `json:"-" bson:"j"`
 }
 
 type Location struct {
@@ -27,6 +28,7 @@ type Location struct {
 	Country  string `json:"country" bson:"co"`
 	Place    string `json:"place" bson:"p"`
 	Distance int    `json:"distance" bson:"d"`
+	JSON     []byte `json:"-" bson:"j"`
 }
 
 type Visit struct {
@@ -35,6 +37,7 @@ type Visit struct {
 	LocationID int       `json:"location" bson:"l"`
 	VisitedAt  Timestamp `json:"visited_at" bson:"v"`
 	Mark       int       `json:"mark" bson:"m"`
+	JSON       []byte    `json:"-" bson:"j"`
 }
 
 type UserVisit struct {

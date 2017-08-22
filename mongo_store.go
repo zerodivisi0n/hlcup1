@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -40,6 +41,11 @@ func (s *MongoStore) CreateUser(u *User) error {
 	if u.ID == 0 {
 		return ErrMissingID
 	}
+	if data, err := json.Marshal(u); err == nil {
+		u.JSON = data
+	} else {
+		return err
+	}
 	return s.withSession(func(s *mgo.Session) error {
 		return usersCollection(s).Insert(u)
 	})
@@ -50,6 +56,11 @@ func (s *MongoStore) CreateUsers(us []User) error {
 	for i, u := range us {
 		if u.ID == 0 {
 			return ErrMissingID
+		}
+		if data, err := json.Marshal(u); err == nil {
+			u.JSON = data
+		} else {
+			return err
 		}
 		docs[i] = u
 	}
@@ -64,6 +75,11 @@ func (s *MongoStore) CreateUsers(us []User) error {
 func (s *MongoStore) UpdateUser(id int, u *User) error {
 	if id != u.ID {
 		return ErrUpdateID
+	}
+	if data, err := json.Marshal(u); err == nil {
+		u.JSON = data
+	} else {
+		return err
 	}
 	return s.withSession(func(s *mgo.Session) error {
 		return usersCollection(s).UpdateId(id, u)
@@ -96,6 +112,11 @@ func (s *MongoStore) CreateLocation(l *Location) error {
 	if l.ID == 0 {
 		return ErrMissingID
 	}
+	if data, err := json.Marshal(l); err == nil {
+		l.JSON = data
+	} else {
+		return err
+	}
 	return s.withSession(func(s *mgo.Session) error {
 		return locationsCollection(s).Insert(l)
 	})
@@ -106,6 +127,11 @@ func (s *MongoStore) CreateLocations(ls []Location) error {
 	for i, l := range ls {
 		if l.ID == 0 {
 			return ErrMissingID
+		}
+		if data, err := json.Marshal(l); err == nil {
+			l.JSON = data
+		} else {
+			return err
 		}
 		docs[i] = l
 	}
@@ -120,6 +146,11 @@ func (s *MongoStore) CreateLocations(ls []Location) error {
 func (s *MongoStore) UpdateLocation(id int, l *Location) error {
 	if id != l.ID {
 		return ErrUpdateID
+	}
+	if data, err := json.Marshal(l); err == nil {
+		l.JSON = data
+	} else {
+		return err
 	}
 	return s.withSession(func(s *mgo.Session) error {
 		return locationsCollection(s).UpdateId(id, l)
@@ -163,6 +194,11 @@ func (s *MongoStore) CreateVisit(v *Visit) error {
 	if v.ID == 0 {
 		return ErrMissingID
 	}
+	if data, err := json.Marshal(v); err == nil {
+		v.JSON = data
+	} else {
+		return err
+	}
 	return s.withSession(func(s *mgo.Session) error {
 		return visitsCollection(s).Insert(v)
 	})
@@ -173,6 +209,11 @@ func (s *MongoStore) CreateVisits(vs []Visit) error {
 	for i, v := range vs {
 		if v.ID == 0 {
 			return ErrMissingID
+		}
+		if data, err := json.Marshal(v); err == nil {
+			v.JSON = data
+		} else {
+			return err
 		}
 		docs[i] = v
 	}
@@ -187,6 +228,11 @@ func (s *MongoStore) CreateVisits(vs []Visit) error {
 func (s *MongoStore) UpdateVisit(id int, v *Visit) error {
 	if id != v.ID {
 		return ErrUpdateID
+	}
+	if data, err := json.Marshal(v); err == nil {
+		v.JSON = data
+	} else {
+		return err
 	}
 	return s.withSession(func(s *mgo.Session) error {
 		return visitsCollection(s).UpdateId(id, v)
