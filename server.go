@@ -11,7 +11,7 @@ import (
 	mgo "gopkg.in/mgo.v2"
 )
 
-var emptyResponse = struct{}{}
+var emptyResponse = []byte("{}\n")
 
 type Store interface {
 	// User methods
@@ -90,7 +90,7 @@ func (s *Server) createUser(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, &emptyResponse)
+	jsonResponse(ctx, emptyResponse)
 }
 
 func (s *Server) updateUser(ctx *fasthttp.RequestCtx) {
@@ -122,7 +122,7 @@ func (s *Server) updateUser(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, &emptyResponse)
+	jsonResponse(ctx, emptyResponse)
 }
 
 func (s *Server) getUser(ctx *fasthttp.RequestCtx) {
@@ -136,7 +136,7 @@ func (s *Server) getUser(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, &user)
+	jsonResponse(ctx, user.JSON)
 }
 
 func (s *Server) getUserVisits(ctx *fasthttp.RequestCtx) {
@@ -158,9 +158,9 @@ func (s *Server) getUserVisits(ctx *fasthttp.RequestCtx) {
 	if len(visits) == 0 {
 		visits = make([]UserVisit, 0)
 	}
-	jsonResponse(ctx, map[string]interface{}{
-		"visits": visits,
-	})
+	if data, err := json.Marshal(map[string]interface{}{"visits": visits}); err == nil {
+		jsonResponse(ctx, data)
+	}
 }
 
 // Locations endpoints
@@ -179,7 +179,7 @@ func (s *Server) createLocation(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, &emptyResponse)
+	jsonResponse(ctx, emptyResponse)
 }
 
 func (s *Server) updateLocation(ctx *fasthttp.RequestCtx) {
@@ -211,7 +211,7 @@ func (s *Server) updateLocation(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, &emptyResponse)
+	jsonResponse(ctx, emptyResponse)
 }
 
 func (s *Server) getLocation(ctx *fasthttp.RequestCtx) {
@@ -225,7 +225,7 @@ func (s *Server) getLocation(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, &location)
+	jsonResponse(ctx, location.JSON)
 }
 
 func (s *Server) getLocationAvg(ctx *fasthttp.RequestCtx) {
@@ -244,9 +244,11 @@ func (s *Server) getLocationAvg(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, map[string]interface{}{
+	if data, err := json.Marshal(map[string]interface{}{
 		"avg": math.Floor(avg*100000+0.5) / 100000,
-	})
+	}); err == nil {
+		jsonResponse(ctx, data)
+	}
 }
 
 // Visits endpoints
@@ -265,7 +267,7 @@ func (s *Server) createVisit(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, &emptyResponse)
+	jsonResponse(ctx, emptyResponse)
 }
 
 func (s *Server) updateVisit(ctx *fasthttp.RequestCtx) {
@@ -297,7 +299,7 @@ func (s *Server) updateVisit(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, &emptyResponse)
+	jsonResponse(ctx, emptyResponse)
 }
 
 func (s *Server) getVisit(ctx *fasthttp.RequestCtx) {
@@ -311,7 +313,7 @@ func (s *Server) getVisit(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, &visit)
+	jsonResponse(ctx, visit.JSON)
 }
 
 func handleDbError(ctx *fasthttp.RequestCtx, err error) {
@@ -325,9 +327,9 @@ func handleDbError(ctx *fasthttp.RequestCtx, err error) {
 	}
 }
 
-func jsonResponse(ctx *fasthttp.RequestCtx, body interface{}) {
+func jsonResponse(ctx *fasthttp.RequestCtx, body []byte) {
 	ctx.SetContentType("application/json; charset=utf-8")
-	json.NewEncoder(ctx).Encode(body)
+	ctx.Write(body)
 }
 
 func parseUserVisitsQuery(args *fasthttp.Args, q *UserVisitsQuery) bool {
