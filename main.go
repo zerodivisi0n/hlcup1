@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -51,11 +53,31 @@ func loadData(store Store, filepath string) error {
 	}
 	defer r.Close()
 
+	var files []*zip.File
 	for _, f := range r.File {
 		// process only .json files
 		if !strings.HasSuffix(f.Name, ".json") {
 			continue
 		}
+		files = append(files, f)
+	}
+
+	sort.SliceStable(files, func(i, j int) bool {
+		order := func(idx int) int {
+			base := path.Base(files[idx].Name)
+			if strings.HasPrefix(base, "users") {
+				return 0
+			} else if strings.HasPrefix(base, "locations") {
+				return 1
+			} else if strings.HasPrefix(base, "visits") {
+				return 2
+			}
+			return 3
+		}
+		return order(i) < order(j)
+	})
+
+	for _, f := range files {
 		log.Infof("Processing file %s", f.Name)
 		rc, err := f.Open()
 		if err != nil {
