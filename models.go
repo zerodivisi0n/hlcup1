@@ -61,6 +61,20 @@ type LocationAvgQuery struct {
 	Gender   string
 }
 
+func (q LocationAvgQuery) FromBirth() Timestamp {
+	if q.ToAge <= 0 {
+		return Timestamp(0)
+	}
+	return Timestamp(time.Now().AddDate(-q.ToAge, 0, 0).Unix())
+}
+
+func (q LocationAvgQuery) ToBirth() Timestamp {
+	if q.FromAge <= 0 {
+		return Timestamp(0)
+	}
+	return Timestamp(time.Now().AddDate(-q.FromAge, 0, 0).Unix())
+}
+
 type Timestamp int64
 
 func (t Timestamp) MarshalJSON() ([]byte, error) {
