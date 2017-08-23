@@ -10,25 +10,15 @@ import (
 	"strings"
 	"time"
 
-	mgo "gopkg.in/mgo.v2"
-
 	log "github.com/sirupsen/logrus"
 )
 
 const datapath = "/tmp/data/data.zip"
 const listenAddr = ":80"
-const mongodbURL = "mongodb://localhost/travels"
 
 func main() {
-	session, err := mgo.Dial(mongodbURL)
-	if err != nil {
-		log.Fatal(err)
-	}
 	var store Store
-	store, err = NewMongoStore(session)
-	if err != nil {
-		log.Fatal(err)
-	}
+	store = NewMemoryStore()
 
 	store = NewJSONProxy(store)
 
