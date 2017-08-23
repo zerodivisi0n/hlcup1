@@ -24,10 +24,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	store, err := NewMongoStore(session)
+	var store Store
+	store, err = NewMongoStore(session)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	store = NewJSONProxy(store)
 
 	if err := loadData(store, datapath); err != nil {
 		log.Fatal(err)
