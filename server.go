@@ -2,16 +2,23 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"math"
 	"strconv"
 
 	"github.com/buaazp/fasthttprouter"
 	log "github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
-	mgo "gopkg.in/mgo.v2"
 )
 
 var emptyResponse = []byte("{}\n")
+
+var (
+	ErrMissingID = errors.New("missing id")
+	ErrNotFound  = errors.New("not found")
+	ErrUpdateID  = errors.New("id field cannot be changed")
+	ErrDup       = errors.New("duplicate key error")
+)
 
 type Store interface {
 	// User methods
@@ -317,7 +324,7 @@ func (s *Server) getVisit(ctx *fasthttp.RequestCtx) {
 }
 
 func handleDbError(ctx *fasthttp.RequestCtx, err error) {
-	if err == mgo.ErrNotFound {
+	if err == ErrNotFound {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 	} else if err == ErrMissingID || err == ErrUpdateID || err == ErrDup {
 		ctx.SetStatusCode(fasthttp.StatusBadRequest)

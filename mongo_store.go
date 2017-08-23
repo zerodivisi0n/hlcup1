@@ -2,17 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"time"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-)
-
-var (
-	ErrMissingID = errors.New("missing id")
-	ErrUpdateID  = errors.New("id field cannot be changed")
-	ErrDup       = errors.New("duplicate key error")
 )
 
 type sessionFunc func(s *mgo.Session) error
@@ -267,6 +260,8 @@ func (s *MongoStore) withSession(f sessionFunc) error {
 	session.Close()
 	if mgo.IsDup(err) {
 		err = ErrDup
+	} else if err == mgo.ErrNotFound {
+		return ErrNotFound
 	}
 	return err
 }
