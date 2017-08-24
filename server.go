@@ -341,18 +341,18 @@ func jsonResponse(ctx *fasthttp.RequestCtx, body []byte) {
 
 func parseUserVisitsQuery(args *fasthttp.Args, q *UserVisitsQuery) bool {
 	if val := args.Peek("fromDate"); len(val) > 0 {
-		ts, err := strconv.Atoi(string(val))
+		ts, err := strconv.ParseInt(string(val), 10, 64)
 		if err != nil {
 			return false
 		}
-		q.FromDate.SetUnix(int64(ts))
+		q.FromDate = ts
 	}
 	if val := args.Peek("toDate"); len(val) > 0 {
-		ts, err := strconv.Atoi(string(val))
+		ts, err := strconv.ParseInt(string(val), 10, 64)
 		if err != nil {
 			return false
 		}
-		q.ToDate.SetUnix(int64(ts))
+		q.ToDate = ts
 	}
 	q.Country = string(args.Peek("country"))
 	if val := args.Peek("toDistance"); len(val) > 0 {
@@ -368,18 +368,18 @@ func parseUserVisitsQuery(args *fasthttp.Args, q *UserVisitsQuery) bool {
 
 func parseLocationAvgQuery(args *fasthttp.Args, q *LocationAvgQuery) bool {
 	if val := args.Peek("fromDate"); len(val) > 0 {
-		ts, err := strconv.Atoi(string(val))
+		ts, err := strconv.ParseInt(string(val), 10, 64)
 		if err != nil {
 			return false
 		}
-		q.FromDate.SetUnix(int64(ts))
+		q.FromDate = ts
 	}
 	if val := args.Peek("toDate"); len(val) > 0 {
-		ts, err := strconv.Atoi(string(val))
+		ts, err := strconv.ParseInt(string(val), 10, 64)
 		if err != nil {
 			return false
 		}
-		q.ToDate.SetUnix(int64(ts))
+		q.ToDate = ts
 	}
 	if val := args.Peek("fromAge"); len(val) > 0 {
 		i, err := strconv.Atoi(string(val))

@@ -108,9 +108,9 @@ func (s *MemoryStore) GetUserVisits(id uint, q *UserVisitsQuery, visits *[]UserV
 	results := make([]UserVisit, 0, userVisits.Size())
 	iterator := userVisits.Iterator()
 	for iterator.Next() {
-		visitedAt := iterator.Key().(Timestamp)
-		if (!q.FromDate.IsZero() && int64(visitedAt) <= int64(q.FromDate)) ||
-			(!q.ToDate.IsZero() && int64(visitedAt) >= int64(q.ToDate)) {
+		visitedAt := iterator.Key().(int64)
+		if (q.FromDate != 0 && visitedAt <= q.FromDate) ||
+			(q.ToDate != 0 && visitedAt >= q.ToDate) {
 			continue
 		}
 		visitID := iterator.Value().(uint)
@@ -206,17 +206,17 @@ func (s *MemoryStore) GetLocationAvg(id uint, q *LocationAvgQuery) (float64, err
 	iterator := locationVisits.Iterator()
 	var sum, cnt int
 	for iterator.Next() {
-		visitedAt := iterator.Key().(Timestamp)
-		if (!q.FromDate.IsZero() && int64(visitedAt) <= int64(q.FromDate)) ||
-			(!q.ToDate.IsZero() && int64(visitedAt) >= int64(q.ToDate)) {
+		visitedAt := iterator.Key().(int64)
+		if (q.FromDate != 0 && visitedAt <= q.FromDate) ||
+			(q.ToDate != 0 && visitedAt >= q.ToDate) {
 			continue
 		}
 		visitID := iterator.Value().(uint)
 		visit := s.visits[visitID]
 		if q.FromAge > 0 || q.ToAge > 0 || q.Gender != "" {
 			user := s.users[visit.UserID]
-			if (q.FromAge > 0 && int64(user.BirthDate) >= int64(q.ToBirth())) ||
-				(q.ToAge > 0 && int64(user.BirthDate) <= int64(q.FromBirth())) ||
+			if (q.FromAge > 0 && user.BirthDate >= q.ToBirth()) ||
+				(q.ToAge > 0 && user.BirthDate <= q.FromBirth()) ||
 				(q.Gender != "" && q.Gender != user.Gender) {
 				continue
 			}
@@ -337,7 +337,7 @@ func (s *MemoryStore) Clear() error {
 }
 
 func timestampComparator(a, b interface{}) int {
-	aTimestamp := int64(a.(Timestamp))
-	bTimestamp := int64(b.(Timestamp))
+	aTimestamp := a.(int64)
+	bTimestamp := b.(int64)
 	return int(aTimestamp - bTimestamp)
 }

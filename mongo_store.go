@@ -286,15 +286,15 @@ func locationAvgPipeline(id uint, q *LocationAvgQuery) []bson.M {
 	}
 }
 
-func timeRangeQuery(from, to Timestamp) bson.M {
-	if !from.IsZero() && !to.IsZero() {
+func timeRangeQuery(from, to int64) bson.M {
+	if from != 0 && to != 0 {
 		return bson.M{
 			"$gt": int64(from),
 			"$lt": int64(to),
 		}
-	} else if !from.IsZero() {
+	} else if from != 0 {
 		return bson.M{"$gt": from}
-	} else if !to.IsZero() {
+	} else if to != 0 {
 		return bson.M{"$lt": to}
 	}
 	return nil

@@ -4,22 +4,19 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/buger/jsonparser"
-
-	"gopkg.in/mgo.v2/bson"
 )
 
 type User struct {
-	ID        uint      `json:"id" bson:"_id"`
-	FirstName string    `json:"first_name" bson:"f"`
-	LastName  string    `json:"last_name" bson:"l"`
-	Email     string    `json:"email" bson:"e"`
-	Gender    string    `json:"gender" bson:"g"`
-	BirthDate Timestamp `json:"birth_date" bson:"b"`
-	JSON      []byte    `json:"-" bson:"j"`
+	ID        uint   `json:"id" bson:"_id"`
+	FirstName string `json:"first_name" bson:"f"`
+	LastName  string `json:"last_name" bson:"l"`
+	Email     string `json:"email" bson:"e"`
+	Gender    string `json:"gender" bson:"g"`
+	BirthDate int64  `json:"birth_date" bson:"b"`
+	JSON      []byte `json:"-" bson:"j"`
 }
 
 type Location struct {
@@ -32,102 +29,47 @@ type Location struct {
 }
 
 type Visit struct {
-	ID         uint      `json:"id" bson:"_id"`
-	UserID     uint      `json:"user" bson:"u"`
-	LocationID uint      `json:"location" bson:"l"`
-	VisitedAt  Timestamp `json:"visited_at" bson:"v"`
-	Mark       int       `json:"mark" bson:"m"`
-	JSON       []byte    `json:"-" bson:"j"`
+	ID         uint   `json:"id" bson:"_id"`
+	UserID     uint   `json:"user" bson:"u"`
+	LocationID uint   `json:"location" bson:"l"`
+	VisitedAt  int64  `json:"visited_at" bson:"v"`
+	Mark       int    `json:"mark" bson:"m"`
+	JSON       []byte `json:"-" bson:"j"`
 }
 
 type UserVisit struct {
-	Mark      int       `json:"mark" bson:"m"`
-	VisitedAt Timestamp `json:"visited_at" bson:"v"`
-	Place     string    `json:"place" bson:"p"`
+	Mark      int    `json:"mark" bson:"m"`
+	VisitedAt int64  `json:"visited_at" bson:"v"`
+	Place     string `json:"place" bson:"p"`
 }
 
 type UserVisitsQuery struct {
-	FromDate   Timestamp
-	ToDate     Timestamp
+	FromDate   int64
+	ToDate     int64
 	Country    string
 	ToDistance int
 }
 
 type LocationAvgQuery struct {
-	FromDate Timestamp
-	ToDate   Timestamp
+	FromDate int64
+	ToDate   int64
 	FromAge  int
 	ToAge    int
 	Gender   string
 }
 
-func (q LocationAvgQuery) FromBirth() Timestamp {
+func (q LocationAvgQuery) FromBirth() int64 {
 	if q.ToAge <= 0 {
-		return Timestamp(0)
+		return 0
 	}
-	return Timestamp(time.Now().AddDate(-q.ToAge, 0, 0).Unix())
+	return time.Now().AddDate(-q.ToAge, 0, 0).Unix()
 }
 
-func (q LocationAvgQuery) ToBirth() Timestamp {
+func (q LocationAvgQuery) ToBirth() int64 {
 	if q.FromAge <= 0 {
-		return Timestamp(0)
+		return 0
 	}
-	return Timestamp(time.Now().AddDate(-q.FromAge, 0, 0).Unix())
-}
-
-type Timestamp int64
-
-func (t Timestamp) MarshalJSON() ([]byte, error) {
-	stamp := fmt.Sprint(int64(t))
-
-	return []byte(stamp), nil
-}
-
-func (t *Timestamp) UnmarshalJSON(b []byte) error {
-	ts, err := strconv.Atoi(string(b))
-	if err != nil {
-		return err
-	}
-
-	t.SetUnix(int64(ts))
-
-	return nil
-}
-
-func (t Timestamp) GetBSON() (interface{}, error) {
-	if t.IsZero() {
-		return nil, nil
-	}
-
-	return int64(t), nil
-}
-
-func (t *Timestamp) SetBSON(raw bson.Raw) error {
-	var tm int64
-
-	if err := raw.Unmarshal(&tm); err != nil {
-		return err
-	}
-
-	*t = Timestamp(tm)
-
-	return nil
-}
-
-func (t *Timestamp) UnmarshalText(text []byte) error {
-	return t.UnmarshalJSON(text)
-}
-
-func (t Timestamp) String() string {
-	return time.Unix(int64(t), 0).String()
-}
-
-func (t *Timestamp) SetUnix(ts int64) {
-	*t = Timestamp(ts)
-}
-
-func (t Timestamp) IsZero() bool {
-	return int64(t) == 0
+	return time.Now().AddDate(-q.FromAge, 0, 0).Unix()
 }
 
 // Custom unmarshalers
@@ -168,7 +110,7 @@ func (u *User) UnmarshalJSON(b []byte) error {
 			}
 		} else if bytes.Equal(key, []byte("birth_date")) {
 			if ts, err := jsonparser.ParseInt(value); err == nil {
-				u.BirthDate.SetUnix(ts)
+				u.BirthDate = ts
 			} else {
 				return errors.New("invalid birth date")
 			}
@@ -242,7 +184,7 @@ func (v *Visit) UnmarshalJSON(b []byte) error {
 			}
 		} else if bytes.Equal(key, []byte("visited_at")) {
 			if ts, err := jsonparser.ParseInt(value); err == nil {
-				v.VisitedAt.SetUnix(ts)
+				v.VisitedAt = ts
 			} else {
 				return fmt.Errorf("invalid visited_at: %v", err)
 			}
@@ -264,7 +206,7 @@ func (u User) Validate() bool {
 		len(u.FirstName) > 0 && len(u.LastName) < 50 &&
 		len(u.LastName) > 0 && len(u.LastName) < 50 &&
 		(u.Gender == "m" || u.Gender == "f") &&
-		!u.BirthDate.IsZero()
+		u.BirthDate != 0
 }
 
 func (l Location) Validate() bool {
@@ -279,6 +221,6 @@ func (v Visit) Validate() bool {
 	return v.ID > 0 &&
 		v.LocationID > 0 &&
 		v.UserID > 0 &&
-		!v.VisitedAt.IsZero() &&
+		v.VisitedAt != 0 &&
 		v.Mark >= 0 && v.Mark <= 5
 }
