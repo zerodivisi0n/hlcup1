@@ -22,8 +22,6 @@ func main() {
 	var store Store
 	store = NewMemoryStore()
 
-	store = NewJSONProxy(store)
-
 	if err := loadData(store, datapath); err != nil {
 		log.Fatal(err)
 	}

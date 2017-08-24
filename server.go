@@ -11,7 +11,7 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-var emptyResponse = []byte("{}\n")
+var emptyResponseBody = []byte("{}\n")
 
 var (
 	ErrMissingID = errors.New("missing id")
@@ -97,7 +97,7 @@ func (s *Server) createUser(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, emptyResponse)
+	emptyResponse(ctx)
 }
 
 func (s *Server) updateUser(ctx *fasthttp.RequestCtx) {
@@ -129,7 +129,7 @@ func (s *Server) updateUser(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, emptyResponse)
+	emptyResponse(ctx)
 }
 
 func (s *Server) getUser(ctx *fasthttp.RequestCtx) {
@@ -143,7 +143,7 @@ func (s *Server) getUser(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, user.JSON)
+	jsonResponse(ctx, &user)
 }
 
 func (s *Server) getUserVisits(ctx *fasthttp.RequestCtx) {
@@ -165,10 +165,7 @@ func (s *Server) getUserVisits(ctx *fasthttp.RequestCtx) {
 	if len(visits) == 0 {
 		visits = make([]UserVisit, 0)
 	}
-	result := UserVisitsResult{visits}
-	if data, err := easyjson.Marshal(&result); err == nil {
-		jsonResponse(ctx, data)
-	}
+	jsonResponse(ctx, &UserVisitsResult{visits})
 }
 
 // Locations endpoints
@@ -187,7 +184,7 @@ func (s *Server) createLocation(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, emptyResponse)
+	emptyResponse(ctx)
 }
 
 func (s *Server) updateLocation(ctx *fasthttp.RequestCtx) {
@@ -219,7 +216,7 @@ func (s *Server) updateLocation(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, emptyResponse)
+	emptyResponse(ctx)
 }
 
 func (s *Server) getLocation(ctx *fasthttp.RequestCtx) {
@@ -233,7 +230,7 @@ func (s *Server) getLocation(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, location.JSON)
+	jsonResponse(ctx, &location)
 }
 
 func (s *Server) getLocationAvg(ctx *fasthttp.RequestCtx) {
@@ -255,9 +252,7 @@ func (s *Server) getLocationAvg(ctx *fasthttp.RequestCtx) {
 	result := LocationAvgResult{
 		Avg: math.Floor(avg*100000+0.5) / 100000,
 	}
-	if data, err := easyjson.Marshal(&result); err == nil {
-		jsonResponse(ctx, data)
-	}
+	jsonResponse(ctx, &result)
 }
 
 // Visits endpoints
@@ -276,7 +271,7 @@ func (s *Server) createVisit(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, emptyResponse)
+	emptyResponse(ctx)
 }
 
 func (s *Server) updateVisit(ctx *fasthttp.RequestCtx) {
@@ -308,7 +303,7 @@ func (s *Server) updateVisit(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, emptyResponse)
+	emptyResponse(ctx)
 }
 
 func (s *Server) getVisit(ctx *fasthttp.RequestCtx) {
@@ -322,7 +317,7 @@ func (s *Server) getVisit(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	jsonResponse(ctx, visit.JSON)
+	jsonResponse(ctx, &visit)
 }
 
 func handleDbError(ctx *fasthttp.RequestCtx, err error) {
@@ -336,9 +331,14 @@ func handleDbError(ctx *fasthttp.RequestCtx, err error) {
 	}
 }
 
-func jsonResponse(ctx *fasthttp.RequestCtx, body []byte) {
+func jsonResponse(ctx *fasthttp.RequestCtx, body easyjson.Marshaler) {
 	ctx.SetContentType("application/json; charset=utf-8")
-	ctx.Write(body)
+	easyjson.MarshalToWriter(body, ctx)
+}
+
+func emptyResponse(ctx *fasthttp.RequestCtx) {
+	ctx.SetContentType("application/json; charset=utf-8")
+	ctx.Write(emptyResponseBody)
 }
 
 func parseUserVisitsQuery(args *fasthttp.Args, q *UserVisitsQuery) bool {
