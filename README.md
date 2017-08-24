@@ -9,7 +9,7 @@ Task for the first round of competition
 Build docker image:
 
 ```
-docker build -t highloadcup .
+./build.sh
 ```
 
 ### Run
@@ -17,7 +17,7 @@ docker build -t highloadcup .
 Start server with test data:
 
 ```
-docker run -v ./data.zip:/tmp/data/data.zip -p 8080:80 highloadcup
+docker run -v ./data.zip:/tmp/data/data.zip -p 8080:80 hlcup1
 ```
 
 ### Develop
@@ -25,5 +25,5 @@ docker run -v ./data.zip:/tmp/data/data.zip -p 8080:80 highloadcup
 Start container with interactive shell:
 
 ```
-docker run -it -v ./data.zip:/tmp/data/data.zip -v $(pwd):/go/src/server -p 8080:80 highloadcup bash
+docker run -it -v ./data.zip:/tmp/data/data.zip -v $(pwd):/go/src/server -w /go/src/server -p 8080:80 golang:1.8 bash
 ```
