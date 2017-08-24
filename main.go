@@ -13,6 +13,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/valyala/fasthttp"
 )
 
 const datapath = "/tmp/data/data.zip"
@@ -26,11 +27,9 @@ func main() {
 		log.Fatal(err)
 	}
 	runtime.GC()
+	printMemoryStats()
 
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	log.Infof("\nAlloc = %vM\nTotalAlloc = %vM\nSys = %vM\nNumGC = %v",
-		m.Alloc/1024/1024, m.TotalAlloc/1024/1024, m.Sys/1024/1024, m.NumGC)
+	go warmUp()
 
 	srv := NewServer(store)
 	log.Infof("Start listening on address %s", listenAddr)
@@ -130,4 +129,56 @@ func loadData(store Store, filepath string) error {
 	log.Infof("Done in %v", time.Now().Sub(start))
 
 	return nil
+}
+
+func printMemoryStats() {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	log.Infof("Memory stats:\nAlloc = %vM\nTotalAlloc = %vM\nSys = %vM\nNumGC = %v",
+		m.Alloc/1024/1024, m.TotalAlloc/1024/1024, m.Sys/1024/1024, m.NumGC)
+}
+
+func warmUp() {
+	time.Sleep(1 * time.Second)
+	log.Info("Start warm up")
+	start := time.Now()
+
+	// Stage 1 - Get users, locations, visits from 1 to 5000 each
+	for k := 0; k < 5; k++ {
+		for i := 1; i <= 5000; i++ {
+			request(fmt.Sprintf("/users/%d", i))
+			request(fmt.Sprintf("/locations/%d", i))
+			request(fmt.Sprintf("/visits/%d", i))
+		}
+	}
+	stage1 := time.Now()
+	log.Infof("Stage 1 complete in %v", stage1.Sub(start))
+
+	// Stage 2 - Get user visits from 1 to 15000
+	for k := 0; k < 5; k++ {
+		for i := 1; i <= 15000; i++ {
+			request(fmt.Sprintf("/users/%d/visits", i))
+		}
+	}
+	stage2 := time.Now()
+	log.Infof("Stage 2 complete in %v", stage2.Sub(stage1))
+
+	// Stage 3 - Get locations avg from 1 to 15000
+	for k := 0; k < 5; k++ {
+		for i := 1; i <= 15000; i++ {
+			request(fmt.Sprintf("/locations/%d/avg", i))
+		}
+	}
+	stage3 := time.Now()
+	log.Infof("Stage 3 complete in %v", stage3.Sub(stage2))
+
+	runtime.GC()
+	log.Infof("Done warm up in %v", time.Now().Sub(start))
+	printMemoryStats()
+}
+
+func request(path string) {
+	if _, _, err := fasthttp.Get(nil, "http://localhost"+listenAddr+path); err != nil {
+		log.Errorf("Request '%s' error: %v", path, err)
+	}
 }
