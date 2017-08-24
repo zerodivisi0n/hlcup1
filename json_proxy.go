@@ -1,6 +1,6 @@
 package main
 
-import "encoding/json"
+import "github.com/mailru/easyjson"
 
 type JSONProxy struct {
 	store Store
@@ -12,7 +12,7 @@ func NewJSONProxy(store Store) *JSONProxy {
 
 // User methods
 func (p JSONProxy) CreateUser(u *User) error {
-	data, err := json.Marshal(u)
+	data, err := easyjson.Marshal(u)
 	if err != nil {
 		return err
 	}
@@ -22,7 +22,7 @@ func (p JSONProxy) CreateUser(u *User) error {
 
 func (p JSONProxy) CreateUsers(us []User) error {
 	for i, u := range us {
-		data, err := json.Marshal(u)
+		data, err := easyjson.Marshal(u)
 		if err != nil {
 			return err
 		}
@@ -32,7 +32,7 @@ func (p JSONProxy) CreateUsers(us []User) error {
 }
 
 func (p JSONProxy) UpdateUser(id uint, u *User) error {
-	data, err := json.Marshal(u)
+	data, err := easyjson.Marshal(u)
 	if err != nil {
 		return err
 	}
@@ -50,7 +50,7 @@ func (p JSONProxy) GetUserVisits(id uint, q *UserVisitsQuery, visits *[]UserVisi
 
 // Location methods
 func (p JSONProxy) CreateLocation(l *Location) error {
-	data, err := json.Marshal(l)
+	data, err := easyjson.Marshal(l)
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func (p JSONProxy) CreateLocation(l *Location) error {
 
 func (p JSONProxy) CreateLocations(ls []Location) error {
 	for i, l := range ls {
-		data, err := json.Marshal(l)
+		data, err := easyjson.Marshal(l)
 		if err != nil {
 			return err
 		}
@@ -70,7 +70,7 @@ func (p JSONProxy) CreateLocations(ls []Location) error {
 }
 
 func (p JSONProxy) UpdateLocation(id uint, l *Location) error {
-	data, err := json.Marshal(l)
+	data, err := easyjson.Marshal(l)
 	if err != nil {
 		return err
 	}
@@ -88,7 +88,7 @@ func (p JSONProxy) GetLocationAvg(id uint, q *LocationAvgQuery) (float64, error)
 
 // Visit methods
 func (p JSONProxy) CreateVisit(v *Visit) error {
-	data, err := json.Marshal(v)
+	data, err := easyjson.Marshal(v)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func (p JSONProxy) CreateVisit(v *Visit) error {
 
 func (p JSONProxy) CreateVisits(vs []Visit) error {
 	for i, v := range vs {
-		data, err := json.Marshal(v)
+		data, err := easyjson.Marshal(v)
 		if err != nil {
 			return err
 		}
@@ -108,7 +108,7 @@ func (p JSONProxy) CreateVisits(vs []Visit) error {
 }
 
 func (p JSONProxy) UpdateVisit(id uint, v *Visit) error {
-	data, err := json.Marshal(v)
+	data, err := easyjson.Marshal(v)
 	if err != nil {
 		return err
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/buger/jsonparser"
 )
 
+//easyjson:json
 type User struct {
 	ID        uint   `json:"id" bson:"_id"`
 	FirstName string `json:"first_name" bson:"f"`
@@ -19,6 +20,7 @@ type User struct {
 	JSON      []byte `json:"-" bson:"j"`
 }
 
+//easyjson:json
 type Location struct {
 	ID       uint   `json:"id" bson:"_id"`
 	City     string `json:"city" bson:"ci"`
@@ -28,6 +30,7 @@ type Location struct {
 	JSON     []byte `json:"-" bson:"j"`
 }
 
+//easyjson:json
 type Visit struct {
 	ID         uint   `json:"id" bson:"_id"`
 	UserID     uint   `json:"user" bson:"u"`
@@ -37,6 +40,7 @@ type Visit struct {
 	JSON       []byte `json:"-" bson:"j"`
 }
 
+//easyjson:json
 type UserVisit struct {
 	Mark      int    `json:"mark" bson:"m"`
 	VisitedAt int64  `json:"visited_at" bson:"v"`
@@ -72,10 +76,12 @@ func (q LocationAvgQuery) ToBirth() int64 {
 	return time.Now().AddDate(-q.FromAge, 0, 0).Unix()
 }
 
+//easyjson:json
 type UserVisitsResult struct {
 	Visits []UserVisit `json:"visits"`
 }
 
+//easyjson:json
 type LocationAvgResult struct {
 	Avg float64 `json:"avg"`
 }

@@ -1,12 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"math"
 	"strconv"
 
 	"github.com/buaazp/fasthttprouter"
+	"github.com/mailru/easyjson"
 	log "github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
 )
@@ -166,7 +166,7 @@ func (s *Server) getUserVisits(ctx *fasthttp.RequestCtx) {
 		visits = make([]UserVisit, 0)
 	}
 	result := UserVisitsResult{visits}
-	if data, err := json.Marshal(&result); err == nil {
+	if data, err := easyjson.Marshal(&result); err == nil {
 		jsonResponse(ctx, data)
 	}
 }
@@ -255,7 +255,7 @@ func (s *Server) getLocationAvg(ctx *fasthttp.RequestCtx) {
 	result := LocationAvgResult{
 		Avg: math.Floor(avg*100000+0.5) / 100000,
 	}
-	if data, err := json.Marshal(&result); err == nil {
+	if data, err := easyjson.Marshal(&result); err == nil {
 		jsonResponse(ctx, data)
 	}
 }
