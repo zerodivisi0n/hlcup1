@@ -165,7 +165,8 @@ func (s *Server) getUserVisits(ctx *fasthttp.RequestCtx) {
 	if len(visits) == 0 {
 		visits = make([]UserVisit, 0)
 	}
-	if data, err := json.Marshal(map[string]interface{}{"visits": visits}); err == nil {
+	result := UserVisitsResult{visits}
+	if data, err := json.Marshal(&result); err == nil {
 		jsonResponse(ctx, data)
 	}
 }
@@ -251,9 +252,10 @@ func (s *Server) getLocationAvg(ctx *fasthttp.RequestCtx) {
 		handleDbError(ctx, err)
 		return
 	}
-	if data, err := json.Marshal(map[string]interface{}{
-		"avg": math.Floor(avg*100000+0.5) / 100000,
-	}); err == nil {
+	result := LocationAvgResult{
+		Avg: math.Floor(avg*100000+0.5) / 100000,
+	}
+	if data, err := json.Marshal(&result); err == nil {
 		jsonResponse(ctx, data)
 	}
 }

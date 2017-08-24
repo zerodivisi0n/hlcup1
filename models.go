@@ -72,6 +72,14 @@ func (q LocationAvgQuery) ToBirth() int64 {
 	return time.Now().AddDate(-q.FromAge, 0, 0).Unix()
 }
 
+type UserVisitsResult struct {
+	Visits []UserVisit `json:"visits"`
+}
+
+type LocationAvgResult struct {
+	Avg float64 `json:"avg"`
+}
+
 // Custom unmarshalers
 func (u *User) UnmarshalJSON(b []byte) error {
 	return jsonparser.ObjectEach(b, func(key []byte, value []byte, vt jsonparser.ValueType, offset int) error {
