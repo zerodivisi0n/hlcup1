@@ -16,7 +16,7 @@ type User struct {
 	LastName  string `json:"last_name" bson:"l"`
 	Email     string `json:"email" bson:"e"`
 	Gender    string `json:"gender" bson:"g"`
-	BirthDate int64  `json:"birth_date" bson:"b"`
+	BirthDate *int64 `json:"birth_date" bson:"b"`
 	JSON      []byte `json:"-" bson:"j"`
 }
 
@@ -26,7 +26,7 @@ type Location struct {
 	City     string `json:"city" bson:"ci"`
 	Country  string `json:"country" bson:"co"`
 	Place    string `json:"place" bson:"p"`
-	Distance int    `json:"distance" bson:"d"`
+	Distance *int   `json:"distance" bson:"d"`
 	JSON     []byte `json:"-" bson:"j"`
 }
 
@@ -35,8 +35,8 @@ type Visit struct {
 	ID         uint   `json:"id" bson:"_id"`
 	UserID     uint   `json:"user" bson:"u"`
 	LocationID uint   `json:"location" bson:"l"`
-	VisitedAt  int64  `json:"visited_at" bson:"v"`
-	Mark       int    `json:"mark" bson:"m"`
+	VisitedAt  *int64 `json:"visited_at" bson:"v"`
+	Mark       *int   `json:"mark" bson:"m"`
 	JSON       []byte `json:"-" bson:"j"`
 }
 
@@ -48,32 +48,34 @@ type UserVisit struct {
 }
 
 type UserVisitsQuery struct {
-	FromDate   int64
-	ToDate     int64
+	FromDate   *int64
+	ToDate     *int64
 	Country    string
-	ToDistance int
+	ToDistance *int
 }
 
 type LocationAvgQuery struct {
-	FromDate int64
-	ToDate   int64
-	FromAge  int
-	ToAge    int
+	FromDate *int64
+	ToDate   *int64
+	FromAge  *int
+	ToAge    *int
 	Gender   string
 }
 
-func (q LocationAvgQuery) FromBirth() int64 {
-	if q.ToAge <= 0 {
-		return 0
+func (q LocationAvgQuery) FromBirth() *int64 {
+	if q.ToAge == nil {
+		return nil
 	}
-	return time.Now().AddDate(-q.ToAge, 0, 0).Unix()
+	from := time.Now().AddDate(-*q.ToAge, 0, 0).Unix()
+	return &from
 }
 
-func (q LocationAvgQuery) ToBirth() int64 {
-	if q.FromAge <= 0 {
-		return 0
+func (q LocationAvgQuery) ToBirth() *int64 {
+	if q.FromAge == nil {
+		return nil
 	}
-	return time.Now().AddDate(-q.FromAge, 0, 0).Unix()
+	to := time.Now().AddDate(-*q.FromAge, 0, 0).Unix()
+	return &to
 }
 
 //easyjson:json
@@ -124,7 +126,7 @@ func (u *User) UnmarshalJSON(b []byte) error {
 			}
 		} else if bytes.Equal(key, []byte("birth_date")) {
 			if ts, err := jsonparser.ParseInt(value); err == nil {
-				u.BirthDate = ts
+				u.BirthDate = &ts
 			} else {
 				return errors.New("invalid birth date")
 			}
@@ -163,8 +165,9 @@ func (l *Location) UnmarshalJSON(b []byte) error {
 				return fmt.Errorf("invalid place: %v", err)
 			}
 		} else if bytes.Equal(key, []byte("distance")) {
-			if id, err := jsonparser.ParseInt(value); err == nil {
-				l.Distance = int(id)
+			if d, err := jsonparser.ParseInt(value); err == nil {
+				d2 := int(d)
+				l.Distance = &d2
 			} else {
 				return fmt.Errorf("invalid distance: %v", err)
 			}
@@ -198,13 +201,14 @@ func (v *Visit) UnmarshalJSON(b []byte) error {
 			}
 		} else if bytes.Equal(key, []byte("visited_at")) {
 			if ts, err := jsonparser.ParseInt(value); err == nil {
-				v.VisitedAt = ts
+				v.VisitedAt = &ts
 			} else {
 				return fmt.Errorf("invalid visited_at: %v", err)
 			}
 		} else if bytes.Equal(key, []byte("mark")) {
 			if mark, err := jsonparser.ParseInt(value); err == nil {
-				v.Mark = int(mark)
+				mark2 := int(mark)
+				v.Mark = &mark2
 			} else {
 				return fmt.Errorf("invalid mark: %v", err)
 			}
@@ -220,7 +224,7 @@ func (u User) Validate() bool {
 		len(u.FirstName) > 0 && len(u.LastName) < 50 &&
 		len(u.LastName) > 0 && len(u.LastName) < 50 &&
 		(u.Gender == "m" || u.Gender == "f") &&
-		u.BirthDate != 0
+		u.BirthDate != nil
 }
 
 func (l Location) Validate() bool {
@@ -228,13 +232,13 @@ func (l Location) Validate() bool {
 		len(l.Place) > 0 &&
 		len(l.Country) > 0 && len(l.Country) < 50 &&
 		len(l.City) > 0 && len(l.City) < 50 &&
-		l.Distance > 0
+		l.Distance != nil && *l.Distance > 0
 }
 
 func (v Visit) Validate() bool {
 	return v.ID > 0 &&
 		v.LocationID > 0 &&
 		v.UserID > 0 &&
-		v.VisitedAt != 0 &&
-		v.Mark >= 0 && v.Mark <= 5
+		v.VisitedAt != nil &&
+		v.Mark != nil && *v.Mark >= 0 && *v.Mark <= 5
 }

@@ -347,14 +347,14 @@ func parseUserVisitsQuery(args *fasthttp.Args, q *UserVisitsQuery) bool {
 		if err != nil {
 			return false
 		}
-		q.FromDate = ts
+		q.FromDate = &ts
 	}
 	if val := args.Peek("toDate"); len(val) > 0 {
 		ts, err := strconv.ParseInt(string(val), 10, 64)
 		if err != nil {
 			return false
 		}
-		q.ToDate = ts
+		q.ToDate = &ts
 	}
 	q.Country = string(args.Peek("country"))
 	if val := args.Peek("toDistance"); len(val) > 0 {
@@ -362,7 +362,7 @@ func parseUserVisitsQuery(args *fasthttp.Args, q *UserVisitsQuery) bool {
 		if err != nil {
 			return false
 		}
-		q.ToDistance = i
+		q.ToDistance = &i
 	}
 
 	return true
@@ -374,28 +374,28 @@ func parseLocationAvgQuery(args *fasthttp.Args, q *LocationAvgQuery) bool {
 		if err != nil {
 			return false
 		}
-		q.FromDate = ts
+		q.FromDate = &ts
 	}
 	if val := args.Peek("toDate"); len(val) > 0 {
 		ts, err := strconv.ParseInt(string(val), 10, 64)
 		if err != nil {
 			return false
 		}
-		q.ToDate = ts
+		q.ToDate = &ts
 	}
 	if val := args.Peek("fromAge"); len(val) > 0 {
 		i, err := strconv.Atoi(string(val))
 		if err != nil {
 			return false
 		}
-		q.FromAge = i
+		q.FromAge = &i
 	}
 	if val := args.Peek("toAge"); len(val) > 0 {
 		i, err := strconv.Atoi(string(val))
 		if err != nil {
 			return false
 		}
-		q.ToAge = i
+		q.ToAge = &i
 	}
 	q.Gender = string(args.Peek("gender"))
 	if q.Gender != "" && q.Gender != "m" && q.Gender != "f" {

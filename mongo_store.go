@@ -240,7 +240,7 @@ func userVisitsPipeline(id uint, q *UserVisitsQuery) []bson.M {
 	if q.Country != "" {
 		filterStage["loc.co"] = q.Country
 	}
-	if q.ToDistance != 0 {
+	if q.ToDistance != nil {
 		filterStage["loc.d"] = bson.M{"$lt": q.ToDistance}
 	}
 
@@ -261,7 +261,7 @@ func locationAvgPipeline(id uint, q *LocationAvgQuery) []bson.M {
 	}
 
 	groupStage := bson.M{"_id": "_", "avg": bson.M{"$avg": "$m"}}
-	if q.FromAge == 0 && q.ToAge == 0 && q.Gender == "" {
+	if q.FromAge == nil && q.ToAge == nil && q.Gender == "" {
 		return []bson.M{
 			{"$match": matchStage},
 			{"$group": groupStage},
@@ -286,16 +286,16 @@ func locationAvgPipeline(id uint, q *LocationAvgQuery) []bson.M {
 	}
 }
 
-func timeRangeQuery(from, to int64) bson.M {
-	if from != 0 && to != 0 {
+func timeRangeQuery(from, to *int64) bson.M {
+	if from != nil && to != nil {
 		return bson.M{
-			"$gt": int64(from),
-			"$lt": int64(to),
+			"$gt": int64(*from),
+			"$lt": int64(*to),
 		}
-	} else if from != 0 {
-		return bson.M{"$gt": from}
-	} else if to != 0 {
-		return bson.M{"$lt": to}
+	} else if from != nil {
+		return bson.M{"$gt": *from}
+	} else if to != nil {
+		return bson.M{"$lt": *to}
 	}
 	return nil
 }

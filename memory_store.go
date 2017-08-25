@@ -109,20 +109,20 @@ func (s *MemoryStore) GetUserVisits(id uint, q *UserVisitsQuery, visits *[]UserV
 	iterator := userVisits.Iterator()
 	for iterator.Next() {
 		visitedAt := iterator.Key().(int64)
-		if (q.FromDate != 0 && visitedAt <= q.FromDate) ||
-			(q.ToDate != 0 && visitedAt >= q.ToDate) {
+		if (q.FromDate != nil && visitedAt <= *q.FromDate) ||
+			(q.ToDate != nil && visitedAt >= *q.ToDate) {
 			continue
 		}
 		visitID := iterator.Value().(uint)
 		visit := s.visits[visitID]
 		location := s.locations[visit.LocationID]
 		if (q.Country != "" && location.Country != q.Country) ||
-			(q.ToDistance > 0 && location.Distance >= q.ToDistance) {
+			(q.ToDistance != nil && *location.Distance >= *q.ToDistance) {
 			continue
 		}
 		results = append(results, UserVisit{
-			Mark:      visit.Mark,
-			VisitedAt: visit.VisitedAt,
+			Mark:      *visit.Mark,
+			VisitedAt: *visit.VisitedAt,
 			Place:     location.Place,
 		})
 	}
@@ -207,22 +207,24 @@ func (s *MemoryStore) GetLocationAvg(id uint, q *LocationAvgQuery) (float64, err
 	var sum, cnt int
 	for iterator.Next() {
 		visitedAt := iterator.Key().(int64)
-		if (q.FromDate != 0 && visitedAt <= q.FromDate) ||
-			(q.ToDate != 0 && visitedAt >= q.ToDate) {
+		if (q.FromDate != nil && visitedAt <= *q.FromDate) ||
+			(q.ToDate != nil && visitedAt >= *q.ToDate) {
 			continue
 		}
 		visitID := iterator.Value().(uint)
 		visit := s.visits[visitID]
-		if q.FromAge > 0 || q.ToAge > 0 || q.Gender != "" {
+		if q.FromAge != nil || q.ToAge != nil || q.Gender != "" {
 			user := s.users[visit.UserID]
-			if (q.FromAge > 0 && user.BirthDate >= q.ToBirth()) ||
-				(q.ToAge > 0 && user.BirthDate <= q.FromBirth()) ||
+			fromBirth := q.FromBirth()
+			toBirth := q.ToBirth()
+			if (fromBirth != nil && *user.BirthDate <= *fromBirth) ||
+				(toBirth != nil && *user.BirthDate >= *toBirth) ||
 				(q.Gender != "" && q.Gender != user.Gender) {
 				continue
 			}
 		}
 
-		sum += visit.Mark
+		sum += *visit.Mark
 		cnt++
 	}
 	s.mu.RUnlock()
@@ -273,8 +275,8 @@ func (s *MemoryStore) createVisit(v *Visit) error {
 	}
 
 	s.visits[v.ID] = *v
-	userVisits.Put(v.VisitedAt, v.ID)
-	locationVisits.Put(v.VisitedAt, v.ID)
+	userVisits.Put(*v.VisitedAt, v.ID)
+	locationVisits.Put(*v.VisitedAt, v.ID)
 	return nil
 }
 
@@ -300,21 +302,21 @@ func (s *MemoryStore) updateVisit(id uint, v *Visit) error {
 		prev.VisitedAt != v.VisitedAt {
 		// user index changed
 		userVisits := s.visitsByUser[prev.UserID]
-		userVisits.Remove(prev.VisitedAt)
+		userVisits.Remove(*prev.VisitedAt)
 		if prev.UserID != v.UserID {
 			userVisits = s.visitsByUser[v.UserID]
 		}
-		userVisits.Put(v.VisitedAt, v.ID)
+		userVisits.Put(*v.VisitedAt, v.ID)
 	}
 	if prev.LocationID != v.LocationID ||
 		prev.VisitedAt != v.VisitedAt {
 		// location index changed
 		locationVisits := s.visitsByLocation[prev.LocationID]
-		locationVisits.Remove(prev.VisitedAt)
+		locationVisits.Remove(*prev.VisitedAt)
 		if prev.LocationID != v.LocationID {
 			locationVisits = s.visitsByLocation[v.LocationID]
 		}
-		locationVisits.Put(v.VisitedAt, v.ID)
+		locationVisits.Put(*v.VisitedAt, v.ID)
 	}
 	return nil
 }
