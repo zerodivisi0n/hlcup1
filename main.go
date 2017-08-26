@@ -29,6 +29,11 @@ func main() {
 	}
 	runtime.GC()
 
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	log.Infof("\nAlloc = %vM\nTotalAlloc = %vM\nSys = %vM\nNumGC = %v",
+		m.Alloc/1024/1024, m.TotalAlloc/1024/1024, m.Sys/1024/1024, m.NumGC)
+
 	srv := NewServer(store)
 	log.Infof("Start listening on address %s", listenAddr)
 	log.Fatal(srv.Listen(listenAddr))
