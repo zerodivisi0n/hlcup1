@@ -17,7 +17,6 @@ type User struct {
 	Email     string `json:"email" bson:"e"`
 	Gender    string `json:"gender" bson:"g"`
 	BirthDate *int64 `json:"birth_date" bson:"b"`
-	JSON      []byte `json:"-" bson:"j"`
 }
 
 //easyjson:json
@@ -27,7 +26,6 @@ type Location struct {
 	Country  string `json:"country" bson:"co"`
 	Place    string `json:"place" bson:"p"`
 	Distance *int   `json:"distance" bson:"d"`
-	JSON     []byte `json:"-" bson:"j"`
 }
 
 //easyjson:json
@@ -37,7 +35,6 @@ type Visit struct {
 	LocationID uint   `json:"location" bson:"l"`
 	VisitedAt  *int64 `json:"visited_at" bson:"v"`
 	Mark       *int   `json:"mark" bson:"m"`
-	JSON       []byte `json:"-" bson:"j"`
 }
 
 //easyjson:json
