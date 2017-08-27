@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path"
 	"runtime"
 	"sort"
@@ -21,6 +22,10 @@ const datapath = "/tmp/data/data.zip"
 const listenAddr = ":80"
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "warm-up" {
+		warmUp()
+		return
+	}
 	var store Store
 	store = NewMemoryStore()
 
@@ -30,7 +35,7 @@ func main() {
 	runtime.GC()
 	printMemoryStats()
 
-	go warmUp()
+	go runWarmUp()
 
 	srv := NewServer(store)
 	log.Infof("Start listening on address %s", listenAddr)
@@ -137,6 +142,19 @@ func printMemoryStats() {
 	runtime.ReadMemStats(&m)
 	log.Infof("Memory stats:\nAlloc = %vM\nTotalAlloc = %vM\nSys = %vM\nNumGC = %v",
 		m.Alloc/1024/1024, m.TotalAlloc/1024/1024, m.Sys/1024/1024, m.NumGC)
+}
+
+func runWarmUp() {
+	cmd := exec.Command(os.Args[0], "warm-up")
+	log.Infof("Start warm up")
+	start := time.Now()
+	err := cmd.Run()
+	if err != nil {
+		log.Warnf("Process finished with error: %v", err)
+	}
+	runtime.GC()
+	log.Infof("Done warm up in %v", time.Now().Sub(start))
+	printMemoryStats()
 }
 
 func warmUp() {
