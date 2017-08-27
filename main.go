@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path"
 	"runtime"
@@ -139,38 +140,34 @@ func printMemoryStats() {
 }
 
 func warmUp() {
+	requests := []string{
+		"/users/%d",
+		"/locations/%d",
+		"/visits/%d",
+		"/users/%d/visits",
+		"/users/%d/visits?fromDate=1203861305",
+		"/users/%d/visits?toDate=1503861305",
+		"/users/%d/visits?country=Russia",
+		"/users/%d/visits?toDistance=4200",
+		"/locations/%d/avg",
+		"/locations/%d/avg?fromDate=1203861305",
+		"/locations/%d/avg?toDate=1503861306",
+		"/locations/%d/avg?fromAge=20",
+		"/locations/%d/avg?toAge=60",
+		"/locations/%d/avg?gender=f",
+		"/locations/%d/avg?gender=m",
+	}
 	time.Sleep(1 * time.Second)
 	log.Info("Start warm up")
 	start := time.Now()
+	rand.Seed(start.Unix())
 
-	// Stage 1 - Get users, locations, visits from 1 to 5000 each
-	for k := 0; k < 5; k++ {
-		for i := 1; i <= 5000; i++ {
-			request(fmt.Sprintf("/users/%d", i))
-			request(fmt.Sprintf("/locations/%d", i))
-			request(fmt.Sprintf("/visits/%d", i))
-		}
+	for i := 0; i < 500000; i++ {
+		req := requests[rand.Intn(len(requests))]
+		id := rand.Intn(1000000) + 1
+		path := fmt.Sprintf(req, id)
+		request(path)
 	}
-	stage1 := time.Now()
-	log.Infof("Stage 1 complete in %v", stage1.Sub(start))
-
-	// Stage 2 - Get user visits from 1 to 15000
-	for k := 0; k < 5; k++ {
-		for i := 1; i <= 15000; i++ {
-			request(fmt.Sprintf("/users/%d/visits", i))
-		}
-	}
-	stage2 := time.Now()
-	log.Infof("Stage 2 complete in %v", stage2.Sub(stage1))
-
-	// Stage 3 - Get locations avg from 1 to 15000
-	for k := 0; k < 5; k++ {
-		for i := 1; i <= 15000; i++ {
-			request(fmt.Sprintf("/locations/%d/avg", i))
-		}
-	}
-	stage3 := time.Now()
-	log.Infof("Stage 3 complete in %v", stage3.Sub(stage2))
 
 	runtime.GC()
 	log.Infof("Done warm up in %v", time.Now().Sub(start))
