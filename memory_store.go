@@ -8,22 +8,22 @@ import (
 
 type MemoryStore struct {
 	mu               sync.RWMutex
-	users            map[uint]User
-	locations        map[uint]Location
-	visits           map[uint]Visit
+	users            []*User
+	locations        []*Location
+	visits           []*Visit
 	emails           map[string]uint
-	visitsByUser     map[uint]*redblacktree.Tree
-	visitsByLocation map[uint]*redblacktree.Tree
+	visitsByUser     []*redblacktree.Tree
+	visitsByLocation []*redblacktree.Tree
 }
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		users:            make(map[uint]User, 10000),
-		locations:        make(map[uint]Location, 10000),
-		visits:           make(map[uint]Visit, 10000),
+		users:            make([]*User, 10000),
+		locations:        make([]*Location, 10000),
+		visits:           make([]*Visit, 10000),
 		emails:           make(map[string]uint, 10000),
-		visitsByUser:     make(map[uint]*redblacktree.Tree, 10000),
-		visitsByLocation: make(map[uint]*redblacktree.Tree, 10000),
+		visitsByUser:     make([]*redblacktree.Tree, 10000),
+		visitsByLocation: make([]*redblacktree.Tree, 10000),
 	}
 }
 
@@ -53,13 +53,25 @@ func (s *MemoryStore) createUser(u *User) error {
 	if u.ID == 0 {
 		return ErrMissingID
 	}
-	if _, exists := s.users[u.ID]; exists {
+	curLen := len(s.users)
+	intID := int(u.ID)
+	if curLen <= intID {
+		newLen := curLen
+		if intID > newLen {
+			newLen = intID
+		}
+		s.users = append(s.users, make([]*User, newLen+1000)...)
+		s.visitsByUser = append(s.visitsByUser, make([]*redblacktree.Tree, newLen+1000)...)
+	}
+	if s.users[u.ID] != nil {
 		return ErrDup
 	}
 	if _, exists := s.emails[u.Email]; exists {
 		return ErrDup
 	}
-	s.users[u.ID] = *u
+	uCopy := *u
+	s.users[u.ID] = &uCopy
+	s.emails[u.Email] = u.ID
 	s.visitsByUser[u.ID] = redblacktree.NewWith(timestampComparator)
 	return nil
 }
@@ -76,35 +88,39 @@ func (s *MemoryStore) updateUser(id uint, u *User) error {
 	if id != u.ID {
 		return ErrUpdateID
 	}
-	if _, exists := s.users[u.ID]; !exists {
+	if len(s.users) <= int(id) || s.users[id] == nil {
 		return ErrNotFound
 	}
 	if eid, exists := s.emails[u.Email]; exists && eid != id {
 		return ErrDup
 	}
-	s.users[u.ID] = *u
+	prev := s.users[id]
+	if prev.Email != u.Email {
+		delete(s.emails, prev.Email)
+		s.emails[u.Email] = u.ID
+	}
+	*s.users[u.ID] = *u
 	return nil
 }
 
 func (s *MemoryStore) GetUser(id uint, u *User) error {
 	s.mu.RLock()
-	var exists bool
-	*u, exists = s.users[id]
-	if !exists {
+	if len(s.users) <= int(id) || s.users[id] == nil {
 		s.mu.RUnlock()
 		return ErrNotFound
 	}
+	*u = *s.users[id]
 	s.mu.RUnlock()
 	return nil
 }
 
 func (s *MemoryStore) GetUserVisits(id uint, q *UserVisitsQuery, visits *[]UserVisit) error {
 	s.mu.RLock()
-	userVisits, ok := s.visitsByUser[id]
-	if !ok {
+	if len(s.visitsByUser) <= int(id) || s.visitsByUser[id] == nil {
 		s.mu.RUnlock()
 		return ErrNotFound
 	}
+	userVisits := s.visitsByUser[id]
 	results := make([]UserVisit, 0, userVisits.Size())
 	iterator := userVisits.Iterator()
 	for iterator.Next() {
@@ -113,8 +129,7 @@ func (s *MemoryStore) GetUserVisits(id uint, q *UserVisitsQuery, visits *[]UserV
 			(q.ToDate != nil && visitedAt >= *q.ToDate) {
 			continue
 		}
-		visitID := iterator.Value().(uint)
-		visit := s.visits[visitID]
+		visit := iterator.Value().(*Visit)
 		location := s.locations[visit.LocationID]
 		if (q.Country != "" && location.Country != q.Country) ||
 			(q.ToDistance != nil && *location.Distance >= *q.ToDistance) {
@@ -157,10 +172,21 @@ func (s *MemoryStore) createLocation(l *Location) error {
 	if l.ID == 0 {
 		return ErrMissingID
 	}
-	if _, exists := s.locations[l.ID]; exists {
+	curLen := len(s.locations)
+	intID := int(l.ID)
+	if curLen <= intID {
+		newLen := curLen
+		if intID > newLen {
+			newLen = intID
+		}
+		s.locations = append(s.locations, make([]*Location, newLen+1000)...)
+		s.visitsByLocation = append(s.visitsByLocation, make([]*redblacktree.Tree, newLen+1000)...)
+	}
+	if s.locations[l.ID] != nil {
 		return ErrDup
 	}
-	s.locations[l.ID] = *l
+	lCopy := *l
+	s.locations[l.ID] = &lCopy
 	s.visitsByLocation[l.ID] = redblacktree.NewWith(timestampComparator)
 	return nil
 }
@@ -177,32 +203,31 @@ func (s *MemoryStore) updateLocation(id uint, l *Location) error {
 	if id != l.ID {
 		return ErrUpdateID
 	}
-	if _, exists := s.locations[l.ID]; !exists {
+	if len(s.locations) <= int(id) || s.locations[id] == nil {
 		return ErrNotFound
 	}
-	s.locations[l.ID] = *l
+	*s.locations[l.ID] = *l
 	return nil
 }
 
 func (s *MemoryStore) GetLocation(id uint, l *Location) error {
 	s.mu.RLock()
-	var exists bool
-	*l, exists = s.locations[id]
-	if !exists {
+	if len(s.locations) <= int(id) || s.locations[id] == nil {
 		s.mu.RUnlock()
 		return ErrNotFound
 	}
+	*l = *s.locations[id]
 	s.mu.RUnlock()
 	return nil
 }
 
 func (s *MemoryStore) GetLocationAvg(id uint, q *LocationAvgQuery) (float64, error) {
 	s.mu.RLock()
-	locationVisits, ok := s.visitsByLocation[id]
-	if !ok {
+	if len(s.visitsByLocation) <= int(id) || s.visitsByLocation[id] == nil {
 		s.mu.RUnlock()
 		return 0, ErrNotFound
 	}
+	locationVisits := s.visitsByLocation[id]
 	iterator := locationVisits.Iterator()
 	var sum, cnt int
 	for iterator.Next() {
@@ -211,8 +236,7 @@ func (s *MemoryStore) GetLocationAvg(id uint, q *LocationAvgQuery) (float64, err
 			(q.ToDate != nil && visitedAt >= *q.ToDate) {
 			continue
 		}
-		visitID := iterator.Value().(uint)
-		visit := s.visits[visitID]
+		visit := iterator.Value().(*Visit)
 		if q.FromAge != nil || q.ToAge != nil || q.Gender != "" {
 			user := s.users[visit.UserID]
 			fromBirth := q.FromBirth()
@@ -249,9 +273,6 @@ func (s *MemoryStore) CreateVisits(vs []Visit) error {
 	var err error
 	for _, v := range vs {
 		err = s.createVisit(&v)
-		if err != nil {
-			break
-		}
 	}
 	s.mu.Unlock()
 	return err
@@ -262,21 +283,28 @@ func (s *MemoryStore) createVisit(v *Visit) error {
 	if v.ID == 0 {
 		return ErrMissingID
 	}
-	if _, exists := s.visits[v.ID]; exists {
+	curLen := len(s.visits)
+	intID := int(v.ID)
+	if curLen <= intID {
+		newLen := curLen
+		if intID > newLen {
+			newLen = intID
+		}
+		s.visits = append(s.visits, make([]*Visit, newLen+1000)...)
+	}
+	if s.visits[v.ID] != nil {
 		return ErrDup
 	}
-	userVisits, ok := s.visitsByUser[v.UserID]
-	if !ok {
+	if len(s.visitsByUser) <= int(v.UserID) || s.visitsByUser[v.UserID] == nil {
 		return ErrNotFound
 	}
-	locationVisits, ok := s.visitsByLocation[v.LocationID]
-	if !ok {
+	if len(s.visitsByLocation) <= int(v.LocationID) || s.visitsByLocation[v.LocationID] == nil {
 		return ErrNotFound
 	}
-
-	s.visits[v.ID] = *v
-	userVisits.Put(*v.VisitedAt, v.ID)
-	locationVisits.Put(*v.VisitedAt, v.ID)
+	vCopy := *v
+	s.visits[v.ID] = &vCopy
+	s.visitsByUser[v.UserID].Put(*v.VisitedAt, &vCopy)
+	s.visitsByLocation[v.LocationID].Put(*v.VisitedAt, &vCopy)
 	return nil
 }
 
@@ -292,43 +320,42 @@ func (s *MemoryStore) updateVisit(id uint, v *Visit) error {
 	if id != v.ID {
 		return ErrUpdateID
 	}
-	prev, ok := s.visits[v.ID]
-	if !ok {
+	if len(s.visits) <= int(id) || s.visits[id] == nil {
 		return ErrNotFound
 	}
-	s.visits[v.ID] = *v
 	// update references
-	if prev.UserID != v.UserID ||
-		prev.VisitedAt != v.VisitedAt {
+	cur := s.visits[v.ID]
+	if cur.UserID != v.UserID ||
+		cur.VisitedAt != v.VisitedAt {
 		// user index changed
-		userVisits := s.visitsByUser[prev.UserID]
-		userVisits.Remove(*prev.VisitedAt)
-		if prev.UserID != v.UserID {
+		userVisits := s.visitsByUser[cur.UserID]
+		userVisits.Remove(*cur.VisitedAt)
+		if cur.UserID != v.UserID {
 			userVisits = s.visitsByUser[v.UserID]
 		}
-		userVisits.Put(*v.VisitedAt, v.ID)
+		userVisits.Put(*v.VisitedAt, cur)
 	}
-	if prev.LocationID != v.LocationID ||
-		prev.VisitedAt != v.VisitedAt {
+	if cur.LocationID != v.LocationID ||
+		cur.VisitedAt != v.VisitedAt {
 		// location index changed
-		locationVisits := s.visitsByLocation[prev.LocationID]
-		locationVisits.Remove(*prev.VisitedAt)
-		if prev.LocationID != v.LocationID {
+		locationVisits := s.visitsByLocation[cur.LocationID]
+		locationVisits.Remove(*cur.VisitedAt)
+		if cur.LocationID != v.LocationID {
 			locationVisits = s.visitsByLocation[v.LocationID]
 		}
-		locationVisits.Put(*v.VisitedAt, v.ID)
+		locationVisits.Put(*v.VisitedAt, cur)
 	}
+	*s.visits[v.ID] = *v
 	return nil
 }
 
 func (s *MemoryStore) GetVisit(id uint, v *Visit) error {
 	s.mu.RLock()
-	var exists bool
-	*v, exists = s.visits[id]
-	if !exists {
+	if len(s.visits) <= int(id) || s.visits[id] == nil {
 		s.mu.RUnlock()
 		return ErrNotFound
 	}
+	*v = *s.visits[id]
 	s.mu.RUnlock()
 	return nil
 }
