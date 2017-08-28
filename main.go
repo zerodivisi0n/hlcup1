@@ -41,7 +41,9 @@ func main() {
 	runtime.GC()
 	printMemoryStats()
 
-	go runWarmUp()
+	if env == 1 {
+		go runWarmUp()
+	}
 
 	srv := NewServer(store)
 	log.Infof("Start listening on address %s", listenAddr)
