@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"bufio"
 	"fmt"
 	"math/rand"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"path"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,6 +20,7 @@ import (
 )
 
 const datapath = "/tmp/data/data.zip"
+const optionspath = "/tmp/data/options.txt"
 const listenAddr = ":80"
 
 func main() {
@@ -25,6 +28,10 @@ func main() {
 		warmUp()
 		return
 	}
+
+	genTs, env := loadOptions(optionspath)
+	log.Infof("Options: genTs=%d, env=%d", genTs, env)
+
 	var store Store
 	store = NewMemoryStore()
 
@@ -39,6 +46,31 @@ func main() {
 	srv := NewServer(store)
 	log.Infof("Start listening on address %s", listenAddr)
 	log.Fatal(srv.Listen(listenAddr))
+}
+
+func loadOptions(filepath string) (ts int64, env int) {
+	file, err := os.Open(filepath)
+	ts = time.Now().Unix()
+	env = 0
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	if scanner.Scan() { // first line - data generation timestamp
+		i, err := strconv.ParseInt(scanner.Text(), 10, 64)
+		if err == nil {
+			ts = i
+		}
+	}
+	if scanner.Scan() { // second line - environment
+		i, err := strconv.ParseInt(scanner.Text(), 10, 0)
+		if err == nil {
+			env = int(i)
+		}
+	}
+	return
 }
 
 func loadData(store Store, filepath string) error {
