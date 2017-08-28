@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"math"
+	"runtime"
+	"sync/atomic"
+	"time"
 
 	"github.com/buger/jsonparser"
 	"github.com/mailru/easyjson"
@@ -19,6 +22,14 @@ var (
 	ErrUpdateID  = errors.New("id field cannot be changed")
 	ErrDup       = errors.New("duplicate key error")
 )
+
+// rating stages for GC
+var stages = []uint32{
+	0,
+	150150,
+	150150 + 40000,
+	150150 + 40000 + 630000,
+}
 
 type Store interface {
 	// User methods
@@ -47,6 +58,8 @@ type Store interface {
 
 type Server struct {
 	store Store
+	stage int
+	qcnt  uint32
 }
 
 func NewServer(store Store) *Server {
@@ -57,6 +70,11 @@ func NewServer(store Store) *Server {
 
 func (s *Server) Listen(addr string) error {
 	return fasthttp.ListenAndServe(addr, s.handler)
+}
+
+func (s *Server) EnableStageGC() {
+	s.stage = 1
+	s.qcnt = 0
 }
 
 func (s *Server) handler(ctx *fasthttp.RequestCtx) {
@@ -98,6 +116,25 @@ func (s *Server) handler(ctx *fasthttp.RequestCtx) {
 	} else {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 	}
+
+	if s.stage > 0 && s.stage < len(stages) {
+		num := atomic.AddUint32(&s.qcnt, 1)
+		maxNum := stages[s.stage]
+		if num == maxNum {
+			time.AfterFunc(100*time.Millisecond, func() {
+				s.runGC()
+				s.stage++
+			})
+		}
+	}
+}
+
+func (s *Server) runGC() {
+	start := time.Now()
+	log.Infof("Start GC for stage %d", s.stage)
+	runtime.GC()
+	log.Infof("GC done in %v", time.Now().Sub(start))
+	printMemoryStats()
 }
 
 // Users endpoints

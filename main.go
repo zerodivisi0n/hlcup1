@@ -41,11 +41,12 @@ func main() {
 	runtime.GC()
 	printMemoryStats()
 
-	if env == 1 {
-		go runWarmUp()
+	srv := NewServer(store)
+
+	if env == 1 { // rating fire
+		go runWarmUp(srv)
 	}
 
-	srv := NewServer(store)
 	log.Infof("Start listening on address %s", listenAddr)
 	log.Fatal(srv.Listen(listenAddr))
 }
@@ -172,7 +173,7 @@ func printMemoryStats() {
 		m.Alloc/1024/1024, m.TotalAlloc/1024/1024, m.Sys/1024/1024, m.NumGC)
 }
 
-func runWarmUp() {
+func runWarmUp(srv *Server) {
 	cmd := exec.Command(os.Args[0], "warm-up")
 	log.Infof("Start warm up")
 	start := time.Now()
@@ -183,6 +184,7 @@ func runWarmUp() {
 	runtime.GC()
 	log.Infof("Done warm up in %v", time.Now().Sub(start))
 	printMemoryStats()
+	srv.EnableStageGC()
 }
 
 func warmUp() {
