@@ -7,8 +7,6 @@ import (
 	"testing"
 	"time"
 
-	mgo "gopkg.in/mgo.v2"
-
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -59,13 +57,6 @@ func TestHandlers(t *testing.T) {
 			path:       "/users/new",
 			request:    `{"first_name":"User"}`,
 			statusCode: fasthttp.StatusBadRequest,
-			storeMethods: []StoreMethod{
-				{
-					method:     "CreateUser",
-					args:       []interface{}{mock.AnythingOfType("*main.User")},
-					returnArgs: []interface{}{ErrMissingID},
-				},
-			},
 		},
 		{
 			name:       "CreateUser/ValidationError",
@@ -95,7 +86,7 @@ func TestHandlers(t *testing.T) {
 				{
 					method:     "CreateUser",
 					args:       []interface{}{mock.AnythingOfType("*main.User")},
-					returnArgs: []interface{}{&mgo.LastError{Code: 11000}},
+					returnArgs: []interface{}{ErrDup},
 				},
 			},
 		},
@@ -113,22 +104,31 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUser",
-					args:       []interface{}{1, mock.AnythingOfType("*main.User")},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.User")},
 					returnArgs: []interface{}{nil},
 					run: func(args mock.Arguments) {
-						u := args.Get(1).(*User)
-						u.LastName = "LastName"
+						user := args.Get(1).(*User)
+						*user = User{
+							ID:        1,
+							FirstName: "First",
+							LastName:  "LastName",
+							Email:     "foo@bar.com",
+							Gender:    "m",
+							BirthDate: &[]int64{time.Unix(100000, 0).Unix()}[0],
+						}
 					},
 				},
 				{
-					method:     "UpdateUser",
-					args:       []interface{}{1, mock.AnythingOfType("*main.User")},
+					method: "UpdateUser",
+					args: []interface{}{uint(1), &User{
+						ID:        1,
+						FirstName: "Updated",
+						LastName:  "LastName",
+						Email:     "foo@bar.com",
+						Gender:    "m",
+						BirthDate: &[]int64{time.Unix(100000, 0).Unix()}[0],
+					}},
 					returnArgs: []interface{}{nil},
-					run: func(args mock.Arguments) {
-						u := args.Get(1).(*User)
-						assert.Equal(t, "Updated", u.FirstName)
-						assert.Equal(t, "LastName", u.LastName)
-					},
 				},
 			},
 		},
@@ -144,8 +144,8 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUser",
-					args:       []interface{}{2, mock.AnythingOfType("*main.User")},
-					returnArgs: []interface{}{mgo.ErrNotFound},
+					args:       []interface{}{uint(2), mock.AnythingOfType("*main.User")},
+					returnArgs: []interface{}{ErrNotFound},
 				},
 			},
 		},
@@ -157,7 +157,7 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUser",
-					args:       []interface{}{1, mock.AnythingOfType("*main.User")},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.User")},
 					returnArgs: []interface{}{nil},
 				},
 			},
@@ -170,7 +170,7 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUser",
-					args:       []interface{}{1, mock.AnythingOfType("*main.User")},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.User")},
 					returnArgs: []interface{}{nil},
 				},
 			},
@@ -183,12 +183,23 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUser",
-					args:       []interface{}{1, mock.AnythingOfType("*main.User")},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.User")},
 					returnArgs: []interface{}{nil},
+					run: func(args mock.Arguments) {
+						user := args.Get(1).(*User)
+						*user = User{
+							ID:        1,
+							FirstName: "First",
+							LastName:  "LastName",
+							Email:     "foo@bar.com",
+							Gender:    "m",
+							BirthDate: &[]int64{time.Unix(100000, 0).Unix()}[0],
+						}
+					},
 				},
 				{
 					method:     "UpdateUser",
-					args:       []interface{}{1, mock.AnythingOfType("*main.User")},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.User")},
 					returnArgs: []interface{}{ErrUpdateID},
 				},
 			},
@@ -203,7 +214,7 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUser",
-					args:       []interface{}{1, mock.AnythingOfType("*main.User")},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.User")},
 					returnArgs: []interface{}{nil},
 					run: func(args mock.Arguments) {
 						user := args.Get(1).(*User)
@@ -213,7 +224,7 @@ func TestHandlers(t *testing.T) {
 							LastName:  "User",
 							Email:     "foo@bar.com",
 							Gender:    "m",
-							BirthDate: Timestamp{time.Unix(100000, 0)},
+							BirthDate: &[]int64{time.Unix(100000, 0).Unix()}[0],
 						}
 					},
 				},
@@ -222,11 +233,11 @@ func TestHandlers(t *testing.T) {
 		{
 			name:     "GetUser",
 			path:     "/users/1",
-			response: `{"id":1,"first_name":"First","last_name":"User","email":"foo@bar.com","gender":"m","birth_date":100000}` + "\n",
+			response: `{"id":1,"first_name":"First","last_name":"User","email":"foo@bar.com","gender":"m","birth_date":100000}`,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUser",
-					args:       []interface{}{1, mock.AnythingOfType("*main.User")},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.User")},
 					returnArgs: []interface{}{nil},
 					run: func(args mock.Arguments) {
 						user := args.Get(1).(*User)
@@ -236,7 +247,7 @@ func TestHandlers(t *testing.T) {
 							LastName:  "User",
 							Email:     "foo@bar.com",
 							Gender:    "m",
-							BirthDate: Timestamp{time.Unix(100000, 0)},
+							BirthDate: &[]int64{time.Unix(100000, 0).Unix()}[0],
 						}
 					},
 				},
@@ -254,31 +265,31 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUser",
-					args:       []interface{}{1, mock.AnythingOfType("*main.User")},
-					returnArgs: []interface{}{mgo.ErrNotFound},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.User")},
+					returnArgs: []interface{}{ErrNotFound},
 				},
 			},
 		},
 		{
 			name:     "GetUserVisits",
 			path:     "/users/1/visits",
-			response: `{"visits":[{"mark":5,"visited_at":5000000,"place":"First Place"},{"mark":3,"visited_at":20732957,"place":"Another Place"}]}` + "\n",
+			response: `{"visits":[{"mark":5,"visited_at":5000000,"place":"First Place"},{"mark":3,"visited_at":20732957,"place":"Another Place"}]}`,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUserVisits",
-					args:       []interface{}{1, mock.AnythingOfType("*main.UserVisitsQuery"), mock.AnythingOfType("*[]main.UserVisit")},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.UserVisitsQuery"), mock.AnythingOfType("*[]main.UserVisit")},
 					returnArgs: []interface{}{nil},
 					run: func(args mock.Arguments) {
 						visits := args.Get(2).(*[]UserVisit)
 						*visits = []UserVisit{
 							{
 								Mark:      5,
-								VisitedAt: Timestamp{time.Unix(5000000, 0)},
+								VisitedAt: time.Unix(5000000, 0).Unix(),
 								Place:     "First Place",
 							},
 							{
 								Mark:      3,
-								VisitedAt: Timestamp{time.Unix(20732957, 0)},
+								VisitedAt: time.Unix(20732957, 0).Unix(),
 								Place:     "Another Place",
 							},
 						}
@@ -298,19 +309,19 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUserVisits",
-					args:       []interface{}{999, mock.AnythingOfType("*main.UserVisitsQuery"), mock.AnythingOfType("*[]main.UserVisit")},
-					returnArgs: []interface{}{mgo.ErrNotFound},
+					args:       []interface{}{uint(999), mock.AnythingOfType("*main.UserVisitsQuery"), mock.AnythingOfType("*[]main.UserVisit")},
+					returnArgs: []interface{}{ErrNotFound},
 				},
 			},
 		},
 		{
 			name:     "GetUserVisits/EmptyResults",
 			path:     "/users/2/visits",
-			response: `{"visits":[]}` + "\n",
+			response: `{"visits":[]}`,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUserVisits",
-					args:       []interface{}{2, mock.AnythingOfType("*main.UserVisitsQuery"), mock.AnythingOfType("*[]main.UserVisit")},
+					args:       []interface{}{uint(2), mock.AnythingOfType("*main.UserVisitsQuery"), mock.AnythingOfType("*[]main.UserVisit")},
 					returnArgs: []interface{}{nil},
 				},
 			},
@@ -319,16 +330,14 @@ func TestHandlers(t *testing.T) {
 			name:     "GetUserVisits/WithQuery",
 			path:     "/users/1/visits",
 			query:    "?fromDate=53636439",
-			response: `{"visits":[]}` + "\n",
+			response: `{"visits":[]}`,
 			storeMethods: []StoreMethod{
 				{
-					method:     "GetUserVisits",
-					args:       []interface{}{1, mock.AnythingOfType("*main.UserVisitsQuery"), mock.AnythingOfType("*[]main.UserVisit")},
+					method: "GetUserVisits",
+					args: []interface{}{uint(1),
+						&UserVisitsQuery{FromDate: &[]int64{time.Unix(53636439, 0).Unix()}[0]},
+						mock.AnythingOfType("*[]main.UserVisit")},
 					returnArgs: []interface{}{nil},
-					run: func(args mock.Arguments) {
-						query := args.Get(1).(*UserVisitsQuery)
-						assert.Equal(t, Timestamp{time.Unix(53636439, 0)}, query.FromDate)
-					},
 				},
 			},
 		},
@@ -342,11 +351,11 @@ func TestHandlers(t *testing.T) {
 			name:     "GetUserVisits/WithUnknownQuery",
 			path:     "/users/1/visits",
 			query:    "?unknown=value",
-			response: `{"visits":[]}` + "\n",
+			response: `{"visits":[]}`,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetUserVisits",
-					args:       []interface{}{1, &UserVisitsQuery{}, mock.AnythingOfType("*[]main.UserVisit")},
+					args:       []interface{}{uint(1), &UserVisitsQuery{}, mock.AnythingOfType("*[]main.UserVisit")},
 					returnArgs: []interface{}{nil},
 				},
 			},
@@ -406,22 +415,31 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetLocation",
-					args:       []interface{}{1, mock.AnythingOfType("*main.Location")},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.Location")},
 					returnArgs: []interface{}{nil},
 					run: func(args mock.Arguments) {
-						l := args.Get(1).(*Location)
-						l.Country = "Russia"
+						location := args.Get(1).(*Location)
+						*location = Location{
+							ID:       1,
+							Country:  "Russia",
+							City:     "Moscow",
+							Place:    "Some Place",
+							Distance: &[]int{150}[0],
+						}
 					},
 				},
 				{
-					method:     "UpdateLocation",
-					args:       []interface{}{1, mock.AnythingOfType("*main.Location")},
+					method: "UpdateLocation",
+					args: []interface{}{
+						uint(1),
+						&Location{
+							ID:       1,
+							Country:  "Russia",
+							City:     "Moscow",
+							Place:    "Another place",
+							Distance: &[]int{150}[0],
+						}},
 					returnArgs: []interface{}{nil},
-					run: func(args mock.Arguments) {
-						l := args.Get(1).(*Location)
-						assert.Equal(t, "Another place", l.Place)
-						assert.Equal(t, "Russia", l.Country)
-					},
 				},
 			},
 		},
@@ -437,8 +455,8 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetLocation",
-					args:       []interface{}{2, mock.AnythingOfType("*main.Location")},
-					returnArgs: []interface{}{mgo.ErrNotFound},
+					args:       []interface{}{uint(2), mock.AnythingOfType("*main.Location")},
+					returnArgs: []interface{}{ErrNotFound},
 				},
 			},
 		},
@@ -450,7 +468,7 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetLocation",
-					args:       []interface{}{1, mock.AnythingOfType("*main.Location")},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.Location")},
 					returnArgs: []interface{}{nil},
 				},
 			},
@@ -463,7 +481,7 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetLocation",
-					args:       []interface{}{1, mock.AnythingOfType("*main.Location")},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.Location")},
 					returnArgs: []interface{}{nil},
 				},
 			},
@@ -479,7 +497,7 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetLocation",
-					args:       []interface{}{1, mock.AnythingOfType("*main.Location")},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.Location")},
 					returnArgs: []interface{}{nil},
 					run: func(args mock.Arguments) {
 						location := args.Get(1).(*Location)
@@ -488,7 +506,7 @@ func TestHandlers(t *testing.T) {
 							Country:  "Russia",
 							City:     "Moscow",
 							Place:    "Some Place",
-							Distance: 150,
+							Distance: &[]int{150}[0],
 						}
 					},
 				},
@@ -502,24 +520,7 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetLocation",
-					args:       []interface{}{1, mock.AnythingOfType("*main.Location")},
-					returnArgs: []interface{}{nil},
-				},
-				{
-					method:     "UpdateLocation",
-					args:       []interface{}{1, mock.AnythingOfType("*main.Location")},
-					returnArgs: []interface{}{ErrUpdateID},
-				},
-			},
-		},
-		{
-			name:     "GetLocation",
-			path:     "/locations/1",
-			response: `{"id":1,"city":"Moscow","country":"Russia","place":"Some Place","distance":150}` + "\n",
-			storeMethods: []StoreMethod{
-				{
-					method:     "GetLocation",
-					args:       []interface{}{1, mock.AnythingOfType("*main.Location")},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.Location")},
 					returnArgs: []interface{}{nil},
 					run: func(args mock.Arguments) {
 						location := args.Get(1).(*Location)
@@ -528,7 +529,34 @@ func TestHandlers(t *testing.T) {
 							Country:  "Russia",
 							City:     "Moscow",
 							Place:    "Some Place",
-							Distance: 150,
+							Distance: &[]int{150}[0],
+						}
+					},
+				},
+				{
+					method:     "UpdateLocation",
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.Location")},
+					returnArgs: []interface{}{ErrUpdateID},
+				},
+			},
+		},
+		{
+			name:     "GetLocation",
+			path:     "/locations/1",
+			response: `{"id":1,"city":"Moscow","country":"Russia","place":"Some Place","distance":150}`,
+			storeMethods: []StoreMethod{
+				{
+					method:     "GetLocation",
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.Location")},
+					returnArgs: []interface{}{nil},
+					run: func(args mock.Arguments) {
+						location := args.Get(1).(*Location)
+						*location = Location{
+							ID:       1,
+							Country:  "Russia",
+							City:     "Moscow",
+							Place:    "Some Place",
+							Distance: &[]int{150}[0],
 						}
 					},
 				},
@@ -546,19 +574,19 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetLocation",
-					args:       []interface{}{1, mock.AnythingOfType("*main.Location")},
-					returnArgs: []interface{}{mgo.ErrNotFound},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.Location")},
+					returnArgs: []interface{}{ErrNotFound},
 				},
 			},
 		},
 		{
 			name:     "GetLocationAvg",
 			path:     "/locations/1/avg",
-			response: `{"avg":4.375}` + "\n",
+			response: `{"avg":4.375}`,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetLocationAvg",
-					args:       []interface{}{1, &LocationAvgQuery{}},
+					args:       []interface{}{uint(1), &LocationAvgQuery{}},
 					returnArgs: []interface{}{4.375, nil},
 				},
 			},
@@ -575,8 +603,8 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetLocationAvg",
-					args:       []interface{}{999, &LocationAvgQuery{}},
-					returnArgs: []interface{}{0, mgo.ErrNotFound},
+					args:       []interface{}{uint(999), &LocationAvgQuery{}},
+					returnArgs: []interface{}{0, ErrNotFound},
 				},
 			},
 		},
@@ -584,11 +612,11 @@ func TestHandlers(t *testing.T) {
 			name:     "GetLocationAvg/WithQuery",
 			path:     "/locations/1/avg",
 			query:    "?fromAge=30&toAge=40&gender=m",
-			response: `{"avg":2.664}` + "\n",
+			response: `{"avg":2.664}`,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetLocationAvg",
-					args:       []interface{}{1, &LocationAvgQuery{FromAge: 30, ToAge: 40, Gender: "m"}},
+					args:       []interface{}{uint(1), &LocationAvgQuery{FromAge: &[]int{30}[0], ToAge: &[]int{40}[0], Gender: "m"}},
 					returnArgs: []interface{}{2.664, nil},
 				},
 			},
@@ -603,11 +631,11 @@ func TestHandlers(t *testing.T) {
 			name:     "GetLocationAvg/WithUnknownQuery",
 			path:     "/locations/200/avg",
 			query:    "?unknown=value",
-			response: `{"avg":0}` + "\n",
+			response: `{"avg":0}`,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetLocationAvg",
-					args:       []interface{}{200, &LocationAvgQuery{}},
+					args:       []interface{}{uint(200), &LocationAvgQuery{}},
 					returnArgs: []interface{}{0, nil},
 				},
 			},
@@ -615,11 +643,11 @@ func TestHandlers(t *testing.T) {
 		{
 			name:     "GetLocationAvg/Rounding",
 			path:     "/locations/15/avg",
-			response: `{"avg":2.65217}` + "\n",
+			response: `{"avg":2.65217}`,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetLocationAvg",
-					args:       []interface{}{15, &LocationAvgQuery{}},
+					args:       []interface{}{uint(15), &LocationAvgQuery{}},
 					returnArgs: []interface{}{2.652173913043478, nil},
 				},
 			},
@@ -685,22 +713,31 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetVisit",
-					args:       []interface{}{100, mock.AnythingOfType("*main.Visit")},
+					args:       []interface{}{uint(100), mock.AnythingOfType("*main.Visit")},
 					returnArgs: []interface{}{nil},
 					run: func(args mock.Arguments) {
-						v := args.Get(1).(*Visit)
-						v.LocationID = 15
+						visit := args.Get(1).(*Visit)
+						*visit = Visit{
+							ID:         100,
+							UserID:     1,
+							LocationID: 15,
+							VisitedAt:  &[]int64{time.Unix(1268006400, 0).Unix()}[0],
+							Mark:       &[]int{2}[0],
+						}
 					},
 				},
 				{
-					method:     "UpdateVisit",
-					args:       []interface{}{100, mock.AnythingOfType("*main.Visit")},
+					method: "UpdateVisit",
+					args: []interface{}{
+						uint(100),
+						&Visit{
+							ID:         100,
+							UserID:     1,
+							LocationID: 15,
+							VisitedAt:  &[]int64{time.Unix(1268006400, 0).Unix()}[0],
+							Mark:       &[]int{4}[0],
+						}},
 					returnArgs: []interface{}{nil},
-					run: func(args mock.Arguments) {
-						v := args.Get(1).(*Visit)
-						assert.Equal(t, 4, v.Mark)
-						assert.Equal(t, 15, v.LocationID)
-					},
 				},
 			},
 		},
@@ -716,8 +753,8 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetVisit",
-					args:       []interface{}{998, mock.AnythingOfType("*main.Visit")},
-					returnArgs: []interface{}{mgo.ErrNotFound},
+					args:       []interface{}{uint(998), mock.AnythingOfType("*main.Visit")},
+					returnArgs: []interface{}{ErrNotFound},
 				},
 			},
 		},
@@ -729,7 +766,7 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetVisit",
-					args:       []interface{}{1, mock.AnythingOfType("*main.Visit")},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.Visit")},
 					returnArgs: []interface{}{nil},
 				},
 			},
@@ -742,7 +779,7 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetVisit",
-					args:       []interface{}{1, mock.AnythingOfType("*main.Visit")},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.Visit")},
 					returnArgs: []interface{}{nil},
 				},
 			},
@@ -758,7 +795,7 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetVisit",
-					args:       []interface{}{1, mock.AnythingOfType("*main.Visit")},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.Visit")},
 					returnArgs: []interface{}{nil},
 					run: func(args mock.Arguments) {
 						visit := args.Get(1).(*Visit)
@@ -766,8 +803,8 @@ func TestHandlers(t *testing.T) {
 							ID:         99,
 							UserID:     1,
 							LocationID: 72,
-							VisitedAt:  Timestamp{time.Unix(1268006400, 0)},
-							Mark:       2,
+							VisitedAt:  &[]int64{time.Unix(1268006400, 0).Unix()}[0],
+							Mark:       &[]int{2}[0],
 						}
 					},
 				},
@@ -781,12 +818,22 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetVisit",
-					args:       []interface{}{1, mock.AnythingOfType("*main.Visit")},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.Visit")},
 					returnArgs: []interface{}{nil},
+					run: func(args mock.Arguments) {
+						visit := args.Get(1).(*Visit)
+						*visit = Visit{
+							ID:         1,
+							UserID:     1,
+							LocationID: 72,
+							VisitedAt:  &[]int64{time.Unix(1268006400, 0).Unix()}[0],
+							Mark:       &[]int{2}[0],
+						}
+					},
 				},
 				{
 					method:     "UpdateVisit",
-					args:       []interface{}{1, mock.AnythingOfType("*main.Visit")},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.Visit")},
 					returnArgs: []interface{}{ErrUpdateID},
 				},
 			},
@@ -794,11 +841,11 @@ func TestHandlers(t *testing.T) {
 		{
 			name:     "GetVisit",
 			path:     "/visits/99",
-			response: `{"id":99,"user":1,"location":72,"visited_at":378654317,"mark":2}` + "\n",
+			response: `{"id":99,"user":1,"location":72,"visited_at":378654317,"mark":2}`,
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetVisit",
-					args:       []interface{}{99, mock.AnythingOfType("*main.Visit")},
+					args:       []interface{}{uint(99), mock.AnythingOfType("*main.Visit")},
 					returnArgs: []interface{}{nil},
 					run: func(args mock.Arguments) {
 						visit := args.Get(1).(*Visit)
@@ -806,8 +853,8 @@ func TestHandlers(t *testing.T) {
 							ID:         99,
 							UserID:     1,
 							LocationID: 72,
-							VisitedAt:  Timestamp{time.Unix(378654317, 0)},
-							Mark:       2,
+							VisitedAt:  &[]int64{time.Unix(378654317, 0).Unix()}[0],
+							Mark:       &[]int{2}[0],
 						}
 					},
 				},
@@ -825,8 +872,8 @@ func TestHandlers(t *testing.T) {
 			storeMethods: []StoreMethod{
 				{
 					method:     "GetVisit",
-					args:       []interface{}{1, mock.AnythingOfType("*main.Visit")},
-					returnArgs: []interface{}{mgo.ErrNotFound},
+					args:       []interface{}{uint(1), mock.AnythingOfType("*main.Visit")},
+					returnArgs: []interface{}{ErrNotFound},
 				},
 			},
 		},
@@ -836,7 +883,7 @@ func TestHandlers(t *testing.T) {
 	ln := fasthttputil.NewInmemoryListener()
 	defer ln.Close()
 	srv := NewServer(nil)
-	go fasthttp.Serve(ln, srv.handler())
+	go fasthttp.Serve(ln, srv.handler)
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			// new store for each test

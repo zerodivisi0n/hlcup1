@@ -14,15 +14,15 @@ func (m *MockStore) CreateUsers(us []User) error {
 	return m.Called(us).Error(0)
 }
 
-func (m *MockStore) UpdateUser(id int, u *User) error {
+func (m *MockStore) UpdateUser(id uint, u *User) error {
 	return m.Called(id, u).Error(0)
 }
 
-func (m *MockStore) GetUser(id int, u *User) error {
+func (m *MockStore) GetUser(id uint, u *User) error {
 	return m.Called(id, u).Error(0)
 }
 
-func (m *MockStore) GetUserVisits(id int, q *UserVisitsQuery, visits *[]UserVisit) error {
+func (m *MockStore) GetUserVisits(id uint, q *UserVisitsQuery, visits *[]UserVisit) error {
 	return m.Called(id, q, visits).Error(0)
 }
 
@@ -34,15 +34,15 @@ func (m *MockStore) CreateLocations(ls []Location) error {
 	return m.Called(ls).Error(0)
 }
 
-func (m *MockStore) UpdateLocation(id int, l *Location) error {
+func (m *MockStore) UpdateLocation(id uint, l *Location) error {
 	return m.Called(id, l).Error(0)
 }
 
-func (m *MockStore) GetLocation(id int, l *Location) error {
+func (m *MockStore) GetLocation(id uint, l *Location) error {
 	return m.Called(id, l).Error(0)
 }
 
-func (m *MockStore) GetLocationAvg(id int, q *LocationAvgQuery) (float64, error) {
+func (m *MockStore) GetLocationAvg(id uint, q *LocationAvgQuery) (float64, error) {
 	args := m.Called(id, q)
 	avg, _ := args.Get(0).(float64)
 	return avg, args.Error(1)
@@ -56,11 +56,11 @@ func (m *MockStore) CreateVisits(vs []Visit) error {
 	return m.Called(vs).Error(0)
 }
 
-func (m *MockStore) UpdateVisit(id int, v *Visit) error {
+func (m *MockStore) UpdateVisit(id uint, v *Visit) error {
 	return m.Called(id, v).Error(0)
 }
 
-func (m *MockStore) GetVisit(id int, v *Visit) error {
+func (m *MockStore) GetVisit(id uint, v *Visit) error {
 	return m.Called(id, v).Error(0)
 }
 
