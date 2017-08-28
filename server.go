@@ -1,11 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"math"
-	"strconv"
 
-	"github.com/buaazp/fasthttprouter"
+	"github.com/buger/jsonparser"
 	"github.com/mailru/easyjson"
 	log "github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
@@ -56,29 +56,48 @@ func NewServer(store Store) *Server {
 }
 
 func (s *Server) Listen(addr string) error {
-	return fasthttp.ListenAndServe(addr, s.handler())
+	return fasthttp.ListenAndServe(addr, s.handler)
 }
 
-func (s *Server) handler() fasthttp.RequestHandler {
-	r := fasthttprouter.New()
-	// Users
-	// r.POST("/users/new", s.createUser) // conflicts with existing wildcard
-	r.POST("/users/:id", s.updateUser)
-	r.GET("/users/:id", s.getUser)
-	r.GET("/users/:id/visits", s.getUserVisits)
-
-	// Locations
-	// r.POST("/locations/new", s.createLocation)
-	r.POST("/locations/:id", s.updateLocation)
-	r.GET("/locations/:id", s.getLocation)
-	r.GET("/locations/:id/avg", s.getLocationAvg)
-
-	// Visits
-	// r.POST("/visits/new", s.createVisit)
-	r.POST("/visits/:id", s.updateVisit)
-	r.GET("/visits/:id", s.getVisit)
-
-	return r.Handler
+func (s *Server) handler(ctx *fasthttp.RequestCtx) {
+	path := ctx.Path()
+	if ctx.IsPost() {
+		if bytes.Equal(path, []byte("/users/new")) {
+			s.createUser(ctx)
+		} else if bytes.HasPrefix(path, []byte("/users/")) {
+			s.updateUser(ctx)
+		} else if bytes.Equal(path, []byte("/locations/new")) {
+			s.createLocation(ctx)
+		} else if bytes.HasPrefix(path, []byte("/locations/")) {
+			s.updateLocation(ctx)
+		} else if bytes.Equal(path, []byte("/visits/new")) {
+			s.createVisit(ctx)
+		} else if bytes.HasPrefix(path, []byte("/visits/")) {
+			s.updateVisit(ctx)
+		} else {
+			ctx.SetStatusCode(fasthttp.StatusNotFound)
+		}
+	} else if ctx.IsGet() {
+		if bytes.HasPrefix(path, []byte("/users/")) {
+			if bytes.HasSuffix(path, []byte("/visits")) {
+				s.getUserVisits(ctx)
+			} else {
+				s.getUser(ctx)
+			}
+		} else if bytes.HasPrefix(path, []byte("/locations/")) {
+			if bytes.HasSuffix(path, []byte("/avg")) {
+				s.getLocationAvg(ctx)
+			} else {
+				s.getLocation(ctx)
+			}
+		} else if bytes.HasPrefix(path, []byte("/visits/")) {
+			s.getVisit(ctx)
+		} else {
+			ctx.SetStatusCode(fasthttp.StatusNotFound)
+		}
+	} else {
+		ctx.SetStatusCode(fasthttp.StatusNotFound)
+	}
 }
 
 // Users endpoints
@@ -101,12 +120,8 @@ func (s *Server) createUser(ctx *fasthttp.RequestCtx) {
 }
 
 func (s *Server) updateUser(ctx *fasthttp.RequestCtx) {
-	if ctx.UserValue("id") == "new" {
-		s.createUser(ctx)
-		return
-	}
 	ctx.SetConnectionClose()
-	id, err := strconv.ParseUint(ctx.UserValue("id").(string), 10, 0)
+	id, err := jsonparser.ParseInt(ctx.Path()[7:])
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
@@ -133,7 +148,7 @@ func (s *Server) updateUser(ctx *fasthttp.RequestCtx) {
 }
 
 func (s *Server) getUser(ctx *fasthttp.RequestCtx) {
-	id, err := strconv.ParseUint(ctx.UserValue("id").(string), 10, 0)
+	id, err := jsonparser.ParseInt(ctx.Path()[7:])
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
@@ -147,7 +162,7 @@ func (s *Server) getUser(ctx *fasthttp.RequestCtx) {
 }
 
 func (s *Server) getUserVisits(ctx *fasthttp.RequestCtx) {
-	id, err := strconv.ParseUint(ctx.UserValue("id").(string), 10, 0)
+	id, err := jsonparser.ParseInt(ctx.Path()[7 : len(ctx.Path())-7])
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
@@ -188,12 +203,8 @@ func (s *Server) createLocation(ctx *fasthttp.RequestCtx) {
 }
 
 func (s *Server) updateLocation(ctx *fasthttp.RequestCtx) {
-	if ctx.UserValue("id") == "new" {
-		s.createLocation(ctx)
-		return
-	}
 	ctx.SetConnectionClose()
-	id, err := strconv.ParseUint(ctx.UserValue("id").(string), 10, 0)
+	id, err := jsonparser.ParseInt(ctx.Path()[11:])
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
@@ -220,7 +231,7 @@ func (s *Server) updateLocation(ctx *fasthttp.RequestCtx) {
 }
 
 func (s *Server) getLocation(ctx *fasthttp.RequestCtx) {
-	id, err := strconv.ParseUint(ctx.UserValue("id").(string), 10, 0)
+	id, err := jsonparser.ParseInt(ctx.Path()[11:])
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
@@ -234,7 +245,7 @@ func (s *Server) getLocation(ctx *fasthttp.RequestCtx) {
 }
 
 func (s *Server) getLocationAvg(ctx *fasthttp.RequestCtx) {
-	id, err := strconv.ParseUint(ctx.UserValue("id").(string), 10, 0)
+	id, err := jsonparser.ParseInt(ctx.Path()[11 : len(ctx.Path())-4])
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
@@ -275,12 +286,8 @@ func (s *Server) createVisit(ctx *fasthttp.RequestCtx) {
 }
 
 func (s *Server) updateVisit(ctx *fasthttp.RequestCtx) {
-	if ctx.UserValue("id") == "new" {
-		s.createVisit(ctx)
-		return
-	}
 	ctx.SetConnectionClose()
-	id, err := strconv.ParseUint(ctx.UserValue("id").(string), 10, 0)
+	id, err := jsonparser.ParseInt(ctx.Path()[8:])
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
@@ -307,7 +314,7 @@ func (s *Server) updateVisit(ctx *fasthttp.RequestCtx) {
 }
 
 func (s *Server) getVisit(ctx *fasthttp.RequestCtx) {
-	id, err := strconv.ParseUint(ctx.UserValue("id").(string), 10, 0)
+	id, err := jsonparser.ParseInt(ctx.Path()[8:])
 	if err != nil {
 		ctx.SetStatusCode(fasthttp.StatusNotFound)
 		return
@@ -343,14 +350,14 @@ func emptyResponse(ctx *fasthttp.RequestCtx) {
 
 func parseUserVisitsQuery(args *fasthttp.Args, q *UserVisitsQuery) bool {
 	if val := args.Peek("fromDate"); len(val) > 0 {
-		ts, err := strconv.ParseInt(string(val), 10, 64)
+		ts, err := jsonparser.ParseInt(val)
 		if err != nil {
 			return false
 		}
 		q.FromDate = &ts
 	}
 	if val := args.Peek("toDate"); len(val) > 0 {
-		ts, err := strconv.ParseInt(string(val), 10, 64)
+		ts, err := jsonparser.ParseInt(val)
 		if err != nil {
 			return false
 		}
@@ -358,11 +365,12 @@ func parseUserVisitsQuery(args *fasthttp.Args, q *UserVisitsQuery) bool {
 	}
 	q.Country = string(args.Peek("country"))
 	if val := args.Peek("toDistance"); len(val) > 0 {
-		i, err := strconv.Atoi(string(val))
+		i, err := jsonparser.ParseInt(val)
 		if err != nil {
 			return false
 		}
-		q.ToDistance = &i
+		ii := int(i)
+		q.ToDistance = &ii
 	}
 
 	return true
@@ -370,32 +378,34 @@ func parseUserVisitsQuery(args *fasthttp.Args, q *UserVisitsQuery) bool {
 
 func parseLocationAvgQuery(args *fasthttp.Args, q *LocationAvgQuery) bool {
 	if val := args.Peek("fromDate"); len(val) > 0 {
-		ts, err := strconv.ParseInt(string(val), 10, 64)
+		ts, err := jsonparser.ParseInt(val)
 		if err != nil {
 			return false
 		}
 		q.FromDate = &ts
 	}
 	if val := args.Peek("toDate"); len(val) > 0 {
-		ts, err := strconv.ParseInt(string(val), 10, 64)
+		ts, err := jsonparser.ParseInt(val)
 		if err != nil {
 			return false
 		}
 		q.ToDate = &ts
 	}
 	if val := args.Peek("fromAge"); len(val) > 0 {
-		i, err := strconv.Atoi(string(val))
+		i, err := jsonparser.ParseInt(val)
 		if err != nil {
 			return false
 		}
-		q.FromAge = &i
+		ii := int(i)
+		q.FromAge = &ii
 	}
 	if val := args.Peek("toAge"); len(val) > 0 {
-		i, err := strconv.Atoi(string(val))
+		i, err := jsonparser.ParseInt(val)
 		if err != nil {
 			return false
 		}
-		q.ToAge = &i
+		ii := int(i)
+		q.ToAge = &ii
 	}
 	q.Gender = string(args.Peek("gender"))
 	if q.Gender != "" && q.Gender != "m" && q.Gender != "f" {
