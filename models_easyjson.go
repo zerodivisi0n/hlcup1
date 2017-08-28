@@ -599,3 +599,182 @@ func (v Location) MarshalEasyJSON(w *jwriter.Writer) {
 func (v *Location) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjsonD2b7633eDecodeGithubComZerodivisi0nHlcup15(l, v)
 }
+func easyjsonD2b7633eDecodeGithubComZerodivisi0nHlcup16(in *jlexer.Lexer, out *FileData) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeString()
+		in.WantColon()
+		if in.IsNull() {
+			in.Skip()
+			in.WantComma()
+			continue
+		}
+		switch key {
+		case "users":
+			if in.IsNull() {
+				in.Skip()
+				out.Users = nil
+			} else {
+				in.Delim('[')
+				if out.Users == nil {
+					if !in.IsDelim(']') {
+						out.Users = make([]User, 0, 1)
+					} else {
+						out.Users = []User{}
+					}
+				} else {
+					out.Users = (out.Users)[:0]
+				}
+				for !in.IsDelim(']') {
+					var v4 User
+					(v4).UnmarshalEasyJSON(in)
+					out.Users = append(out.Users, v4)
+					in.WantComma()
+				}
+				in.Delim(']')
+			}
+		case "locations":
+			if in.IsNull() {
+				in.Skip()
+				out.Locations = nil
+			} else {
+				in.Delim('[')
+				if out.Locations == nil {
+					if !in.IsDelim(']') {
+						out.Locations = make([]Location, 0, 1)
+					} else {
+						out.Locations = []Location{}
+					}
+				} else {
+					out.Locations = (out.Locations)[:0]
+				}
+				for !in.IsDelim(']') {
+					var v5 Location
+					(v5).UnmarshalEasyJSON(in)
+					out.Locations = append(out.Locations, v5)
+					in.WantComma()
+				}
+				in.Delim(']')
+			}
+		case "visits":
+			if in.IsNull() {
+				in.Skip()
+				out.Visits = nil
+			} else {
+				in.Delim('[')
+				if out.Visits == nil {
+					if !in.IsDelim(']') {
+						out.Visits = make([]Visit, 0, 1)
+					} else {
+						out.Visits = []Visit{}
+					}
+				} else {
+					out.Visits = (out.Visits)[:0]
+				}
+				for !in.IsDelim(']') {
+					var v6 Visit
+					(v6).UnmarshalEasyJSON(in)
+					out.Visits = append(out.Visits, v6)
+					in.WantComma()
+				}
+				in.Delim(']')
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjsonD2b7633eEncodeGithubComZerodivisi0nHlcup16(out *jwriter.Writer, in FileData) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	if !first {
+		out.RawByte(',')
+	}
+	first = false
+	out.RawString("\"users\":")
+	if in.Users == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
+		out.RawString("null")
+	} else {
+		out.RawByte('[')
+		for v7, v8 := range in.Users {
+			if v7 > 0 {
+				out.RawByte(',')
+			}
+			(v8).MarshalEasyJSON(out)
+		}
+		out.RawByte(']')
+	}
+	if !first {
+		out.RawByte(',')
+	}
+	first = false
+	out.RawString("\"locations\":")
+	if in.Locations == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
+		out.RawString("null")
+	} else {
+		out.RawByte('[')
+		for v9, v10 := range in.Locations {
+			if v9 > 0 {
+				out.RawByte(',')
+			}
+			(v10).MarshalEasyJSON(out)
+		}
+		out.RawByte(']')
+	}
+	if !first {
+		out.RawByte(',')
+	}
+	first = false
+	out.RawString("\"visits\":")
+	if in.Visits == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
+		out.RawString("null")
+	} else {
+		out.RawByte('[')
+		for v11, v12 := range in.Visits {
+			if v11 > 0 {
+				out.RawByte(',')
+			}
+			(v12).MarshalEasyJSON(out)
+		}
+		out.RawByte(']')
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v FileData) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjsonD2b7633eEncodeGithubComZerodivisi0nHlcup16(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v FileData) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjsonD2b7633eEncodeGithubComZerodivisi0nHlcup16(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *FileData) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjsonD2b7633eDecodeGithubComZerodivisi0nHlcup16(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *FileData) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjsonD2b7633eDecodeGithubComZerodivisi0nHlcup16(l, v)
+}

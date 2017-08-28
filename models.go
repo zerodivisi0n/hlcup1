@@ -44,6 +44,13 @@ type UserVisit struct {
 	Place     string `json:"place" bson:"p"`
 }
 
+//easyjson:json
+type FileData struct {
+	Users     []User     `json:"users"`
+	Locations []Location `json:"locations"`
+	Visits    []Visit    `json:"visits"`
+}
+
 type UserVisitsQuery struct {
 	FromDate   *int64
 	ToDate     *int64

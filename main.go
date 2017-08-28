@@ -2,9 +2,7 @@ package main
 
 import (
 	"archive/zip"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -14,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mailru/easyjson"
 	log "github.com/sirupsen/logrus"
 	"github.com/valyala/fasthttp"
 )
@@ -85,26 +84,18 @@ func loadData(store Store, filepath string) error {
 		return order(i) < order(j)
 	})
 
-	for _, f := range files {
+	for i, f := range files {
 		log.Infof("Processing file %s", f.Name)
 		rc, err := f.Open()
 		if err != nil {
 			log.Warnf("Failed to open data file %s: %v", f.Name, err)
 			continue
 		}
-		buf, err := ioutil.ReadAll(rc)
+
+		var data FileData
+		err = easyjson.UnmarshalFromReader(rc, &data)
 		rc.Close()
 		if err != nil {
-			log.Warnf("Failed to read data file %s: %v", f.Name, err)
-			continue
-		}
-
-		data := struct {
-			Users     []User
-			Visits    []Visit
-			Locations []Location
-		}{}
-		if err := json.Unmarshal(buf, &data); err != nil {
 			log.Warnf("Failed to read data: %v", err)
 			continue
 		}
@@ -129,6 +120,9 @@ func loadData(store Store, filepath string) error {
 				log.Warnf("Import error %v", err)
 			}
 			log.Infof("Done")
+		}
+		if i%10 == 0 {
+			runtime.GC()
 		}
 	}
 
