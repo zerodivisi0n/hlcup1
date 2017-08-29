@@ -11,17 +11,17 @@ import (
 
 //easyjson:json
 type User struct {
-	ID        uint   `json:"id" bson:"_id"`
+	ID        uint   `json:"id" bson:"_id" reindex:"id,,pk"`
 	FirstName string `json:"first_name" bson:"f"`
 	LastName  string `json:"last_name" bson:"l"`
-	Email     string `json:"email" bson:"e"`
+	Email     string `json:"email" bson:"e" reindex:"email"`
 	Gender    string `json:"gender" bson:"g"`
 	BirthDate *int64 `json:"birth_date" bson:"b"`
 }
 
 //easyjson:json
 type Location struct {
-	ID       uint   `json:"id" bson:"_id"`
+	ID       uint   `json:"id" bson:"_id" reindex:"id,,pk"`
 	City     string `json:"city" bson:"ci"`
 	Country  string `json:"country" bson:"co"`
 	Place    string `json:"place" bson:"p"`
@@ -30,7 +30,7 @@ type Location struct {
 
 //easyjson:json
 type Visit struct {
-	ID         uint   `json:"id" bson:"_id"`
+	ID         uint   `json:"id" bson:"_id" reindex:"id,,pk"`
 	UserID     uint   `json:"user" bson:"u"`
 	LocationID uint   `json:"location" bson:"l"`
 	VisitedAt  *int64 `json:"visited_at" bson:"v"`

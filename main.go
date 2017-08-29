@@ -33,7 +33,10 @@ func main() {
 	log.Infof("Options: genTs=%d, env=%d", genTs, env)
 
 	var store Store
-	store = NewMemoryStore()
+	store, err := NewReindexerStore()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	if err := loadData(store, datapath); err != nil {
 		log.Fatal(err)
