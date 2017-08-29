@@ -44,25 +44,9 @@ func easyjsonD2b7633eDecodeGithubComZerodivisi0nHlcup1(in *jlexer.Lexer, out *Vi
 		case "location":
 			out.LocationID = uint(in.Uint())
 		case "visited_at":
-			if in.IsNull() {
-				in.Skip()
-				out.VisitedAt = nil
-			} else {
-				if out.VisitedAt == nil {
-					out.VisitedAt = new(int64)
-				}
-				*out.VisitedAt = int64(in.Int64())
-			}
+			out.VisitedAt = int64(in.Int64())
 		case "mark":
-			if in.IsNull() {
-				in.Skip()
-				out.Mark = nil
-			} else {
-				if out.Mark == nil {
-					out.Mark = new(int)
-				}
-				*out.Mark = int(in.Int())
-			}
+			out.Mark = int(in.Int())
 		default:
 			in.SkipRecursive()
 		}
@@ -100,21 +84,13 @@ func easyjsonD2b7633eEncodeGithubComZerodivisi0nHlcup1(out *jwriter.Writer, in V
 	}
 	first = false
 	out.RawString("\"visited_at\":")
-	if in.VisitedAt == nil {
-		out.RawString("null")
-	} else {
-		out.Int64(int64(*in.VisitedAt))
-	}
+	out.Int64(int64(in.VisitedAt))
 	if !first {
 		out.RawByte(',')
 	}
 	first = false
 	out.RawString("\"mark\":")
-	if in.Mark == nil {
-		out.RawString("null")
-	} else {
-		out.Int(int(*in.Mark))
-	}
+	out.Int(int(in.Mark))
 	out.RawByte('}')
 }
 
@@ -346,15 +322,7 @@ func easyjsonD2b7633eDecodeGithubComZerodivisi0nHlcup13(in *jlexer.Lexer, out *U
 		case "gender":
 			out.Gender = string(in.String())
 		case "birth_date":
-			if in.IsNull() {
-				in.Skip()
-				out.BirthDate = nil
-			} else {
-				if out.BirthDate == nil {
-					out.BirthDate = new(int64)
-				}
-				*out.BirthDate = int64(in.Int64())
-			}
+			out.BirthDate = int64(in.Int64())
 		default:
 			in.SkipRecursive()
 		}
@@ -404,11 +372,7 @@ func easyjsonD2b7633eEncodeGithubComZerodivisi0nHlcup13(out *jwriter.Writer, in 
 	}
 	first = false
 	out.RawString("\"birth_date\":")
-	if in.BirthDate == nil {
-		out.RawString("null")
-	} else {
-		out.Int64(int64(*in.BirthDate))
-	}
+	out.Int64(int64(in.BirthDate))
 	out.RawByte('}')
 }
 
@@ -523,15 +487,7 @@ func easyjsonD2b7633eDecodeGithubComZerodivisi0nHlcup15(in *jlexer.Lexer, out *L
 		case "place":
 			out.Place = string(in.String())
 		case "distance":
-			if in.IsNull() {
-				in.Skip()
-				out.Distance = nil
-			} else {
-				if out.Distance == nil {
-					out.Distance = new(int)
-				}
-				*out.Distance = int(in.Int())
-			}
+			out.Distance = int(in.Int())
 		default:
 			in.SkipRecursive()
 		}
@@ -575,11 +531,7 @@ func easyjsonD2b7633eEncodeGithubComZerodivisi0nHlcup15(out *jwriter.Writer, in 
 	}
 	first = false
 	out.RawString("\"distance\":")
-	if in.Distance == nil {
-		out.RawString("null")
-	} else {
-		out.Int(int(*in.Distance))
-	}
+	out.Int(int(in.Distance))
 	out.RawByte('}')
 }
 

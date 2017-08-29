@@ -132,12 +132,12 @@ func (s *MemoryStore) GetUserVisits(id uint, q *UserVisitsQuery, visits *[]UserV
 		visit := iterator.Value().(*Visit)
 		location := s.locations[visit.LocationID]
 		if (q.Country != "" && location.Country != q.Country) ||
-			(q.ToDistance != nil && *location.Distance >= *q.ToDistance) {
+			(q.ToDistance != nil && location.Distance >= *q.ToDistance) {
 			continue
 		}
 		results = append(results, UserVisit{
-			Mark:      *visit.Mark,
-			VisitedAt: *visit.VisitedAt,
+			Mark:      visit.Mark,
+			VisitedAt: visit.VisitedAt,
 			Place:     location.Place,
 		})
 	}
@@ -241,14 +241,14 @@ func (s *MemoryStore) GetLocationAvg(id uint, q *LocationAvgQuery) (float64, err
 			user := s.users[visit.UserID]
 			fromBirth := q.FromBirth()
 			toBirth := q.ToBirth()
-			if (fromBirth != nil && *user.BirthDate <= *fromBirth) ||
-				(toBirth != nil && *user.BirthDate >= *toBirth) ||
+			if (fromBirth != nil && user.BirthDate <= *fromBirth) ||
+				(toBirth != nil && user.BirthDate >= *toBirth) ||
 				(q.Gender != "" && q.Gender != user.Gender) {
 				continue
 			}
 		}
 
-		sum += *visit.Mark
+		sum += visit.Mark
 		cnt++
 	}
 	s.mu.RUnlock()
@@ -303,8 +303,8 @@ func (s *MemoryStore) createVisit(v *Visit) error {
 	}
 	vCopy := *v
 	s.visits[v.ID] = &vCopy
-	s.visitsByUser[v.UserID].Put(*v.VisitedAt, &vCopy)
-	s.visitsByLocation[v.LocationID].Put(*v.VisitedAt, &vCopy)
+	s.visitsByUser[v.UserID].Put(v.VisitedAt, &vCopy)
+	s.visitsByLocation[v.LocationID].Put(v.VisitedAt, &vCopy)
 	return nil
 }
 
@@ -329,21 +329,21 @@ func (s *MemoryStore) updateVisit(id uint, v *Visit) error {
 		cur.VisitedAt != v.VisitedAt {
 		// user index changed
 		userVisits := s.visitsByUser[cur.UserID]
-		userVisits.Remove(*cur.VisitedAt)
+		userVisits.Remove(cur.VisitedAt)
 		if cur.UserID != v.UserID {
 			userVisits = s.visitsByUser[v.UserID]
 		}
-		userVisits.Put(*v.VisitedAt, cur)
+		userVisits.Put(v.VisitedAt, cur)
 	}
 	if cur.LocationID != v.LocationID ||
 		cur.VisitedAt != v.VisitedAt {
 		// location index changed
 		locationVisits := s.visitsByLocation[cur.LocationID]
-		locationVisits.Remove(*cur.VisitedAt)
+		locationVisits.Remove(cur.VisitedAt)
 		if cur.LocationID != v.LocationID {
 			locationVisits = s.visitsByLocation[v.LocationID]
 		}
-		locationVisits.Put(*v.VisitedAt, cur)
+		locationVisits.Put(v.VisitedAt, cur)
 	}
 	*s.visits[v.ID] = *v
 	return nil

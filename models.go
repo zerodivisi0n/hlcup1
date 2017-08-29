@@ -16,7 +16,7 @@ type User struct {
 	LastName  string `json:"last_name" bson:"l"`
 	Email     string `json:"email" bson:"e"`
 	Gender    string `json:"gender" bson:"g"`
-	BirthDate *int64 `json:"birth_date" bson:"b"`
+	BirthDate int64  `json:"birth_date" bson:"b"`
 }
 
 //easyjson:json
@@ -25,16 +25,16 @@ type Location struct {
 	City     string `json:"city" bson:"ci"`
 	Country  string `json:"country" bson:"co"`
 	Place    string `json:"place" bson:"p"`
-	Distance *int   `json:"distance" bson:"d"`
+	Distance int    `json:"distance" bson:"d"`
 }
 
 //easyjson:json
 type Visit struct {
-	ID         uint   `json:"id" bson:"_id"`
-	UserID     uint   `json:"user" bson:"u"`
-	LocationID uint   `json:"location" bson:"l"`
-	VisitedAt  *int64 `json:"visited_at" bson:"v"`
-	Mark       *int   `json:"mark" bson:"m"`
+	ID         uint  `json:"id" bson:"_id"`
+	UserID     uint  `json:"user" bson:"u"`
+	LocationID uint  `json:"location" bson:"l"`
+	VisitedAt  int64 `json:"visited_at" bson:"v"`
+	Mark       int   `json:"mark" bson:"m"`
 }
 
 //easyjson:json
@@ -93,8 +93,9 @@ type LocationAvgResult struct {
 }
 
 // Custom unmarshalers
-func (u *User) UnmarshalJSON(b []byte) error {
-	return jsonparser.ObjectEach(b, func(key []byte, value []byte, vt jsonparser.ValueType, offset int) error {
+func (u *User) UnmarshalData(b []byte, all bool) error {
+	var fieldsCount int
+	err := jsonparser.ObjectEach(b, func(key []byte, value []byte, vt jsonparser.ValueType, offset int) error {
 		if vt == jsonparser.Null {
 			return errors.New("null type")
 		}
@@ -130,17 +131,26 @@ func (u *User) UnmarshalJSON(b []byte) error {
 			}
 		} else if bytes.Equal(key, []byte("birth_date")) {
 			if ts, err := jsonparser.ParseInt(value); err == nil {
-				u.BirthDate = &ts
+				u.BirthDate = ts
 			} else {
 				return errors.New("invalid birth date")
 			}
 		}
+		fieldsCount++
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+	if all && fieldsCount < 6 {
+		return errors.New("missing required fields")
+	}
+	return nil
 }
 
-func (l *Location) UnmarshalJSON(b []byte) error {
-	return jsonparser.ObjectEach(b, func(key []byte, value []byte, vt jsonparser.ValueType, offset int) error {
+func (l *Location) UnmarshalData(b []byte, all bool) error {
+	var fieldsCount int
+	err := jsonparser.ObjectEach(b, func(key []byte, value []byte, vt jsonparser.ValueType, offset int) error {
 		if vt == jsonparser.Null {
 			return errors.New("null type")
 		}
@@ -170,18 +180,26 @@ func (l *Location) UnmarshalJSON(b []byte) error {
 			}
 		} else if bytes.Equal(key, []byte("distance")) {
 			if d, err := jsonparser.ParseInt(value); err == nil {
-				d2 := int(d)
-				l.Distance = &d2
+				l.Distance = int(d)
 			} else {
 				return fmt.Errorf("invalid distance: %v", err)
 			}
 		}
+		fieldsCount++
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+	if all && fieldsCount < 5 {
+		return errors.New("missing required fields")
+	}
+	return nil
 }
 
-func (v *Visit) UnmarshalJSON(b []byte) error {
-	return jsonparser.ObjectEach(b, func(key []byte, value []byte, vt jsonparser.ValueType, offset int) error {
+func (v *Visit) UnmarshalData(b []byte, all bool) error {
+	var fieldsCount int
+	err := jsonparser.ObjectEach(b, func(key []byte, value []byte, vt jsonparser.ValueType, offset int) error {
 		if vt == jsonparser.Null {
 			return errors.New("null type")
 		}
@@ -205,20 +223,27 @@ func (v *Visit) UnmarshalJSON(b []byte) error {
 			}
 		} else if bytes.Equal(key, []byte("visited_at")) {
 			if ts, err := jsonparser.ParseInt(value); err == nil {
-				v.VisitedAt = &ts
+				v.VisitedAt = ts
 			} else {
 				return fmt.Errorf("invalid visited_at: %v", err)
 			}
 		} else if bytes.Equal(key, []byte("mark")) {
 			if mark, err := jsonparser.ParseInt(value); err == nil {
-				mark2 := int(mark)
-				v.Mark = &mark2
+				v.Mark = int(mark)
 			} else {
 				return fmt.Errorf("invalid mark: %v", err)
 			}
 		}
+		fieldsCount++
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+	if all && fieldsCount < 5 {
+		return errors.New("missing required fields")
+	}
+	return nil
 }
 
 // Validators
@@ -227,8 +252,7 @@ func (u User) Validate() bool {
 		len(u.Email) > 0 && len(u.Email) < 100 &&
 		len(u.FirstName) > 0 && len(u.LastName) < 50 &&
 		len(u.LastName) > 0 && len(u.LastName) < 50 &&
-		(u.Gender == "m" || u.Gender == "f") &&
-		u.BirthDate != nil
+		(u.Gender == "m" || u.Gender == "f")
 }
 
 func (l Location) Validate() bool {
@@ -236,13 +260,12 @@ func (l Location) Validate() bool {
 		len(l.Place) > 0 &&
 		len(l.Country) > 0 && len(l.Country) < 50 &&
 		len(l.City) > 0 && len(l.City) < 50 &&
-		l.Distance != nil && *l.Distance > 0
+		l.Distance > 0
 }
 
 func (v Visit) Validate() bool {
 	return v.ID > 0 &&
 		v.LocationID > 0 &&
 		v.UserID > 0 &&
-		v.VisitedAt != nil &&
-		v.Mark != nil && *v.Mark >= 0 && *v.Mark <= 5
+		v.Mark >= 0 && v.Mark <= 5
 }
